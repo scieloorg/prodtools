@@ -67,24 +67,29 @@ class XMLData:
                     a.append( (attr_filename , filetype) )
         return a
 
+class XSLFiles:
+    def __init__(self, xsl_sgml2xml, xsl_xml2pmc, xsl_pmc, xsl_err, xsl_report, xsl_preview):
+        
+        # XSL
+        self.xsl_sgml2xml = xsl_sgml2xml
+        self.xsl_xml2pmc = xsl_xml2pmc
+        self.xsl_pmc = xsl_pmc
+        self.xsl_err = xsl_err
+        self.xsl_report = xsl_report
+        self.xsl_preview = xsl_preview
+
+    
 
 class MarkupPMC:
     valid_extensions = [ '.tiff', '.eps', '.tif' ]
     
-    def __init__(self, xml_processor, xml_tree, path_xsl):
+    def __init__(self, xml_processor, xml_tree, xsl_files):
         # <???>/ag/v49n1/pmc/pmc_work/02-05/02-05.sgm.xml
         self.xml_processor = xml_processor
         
         self.xml_data = XMLData(xml_tree)
-        self.path_xsl = path_xsl
-        # XSL
-        self.xsl_sgml2xml = path_xsl + '/../sgml2xml/sgml2xml.xsl'
-        self.xsl_xml2pmc = path_xsl + '/../sgml2xml/xml2pmc.xsl'
-        self.xsl_pmc = path_xsl + '/../sgml2xml/pmc.xsl'
-        self.xsl_err = path_xsl + '/pmcstylechecker.xsl'
-        self.xsl_report = path_xsl + '/pmcstylereporter.xsl'
-        self.xsl_preview = path_xsl + '/viewText.xsl'
-
+        self.xsl_files = xsl_files
+        
         self.outputs_extensions = [ '.local.xml', '.rep.xml', '.rep.html', '.xml.html', '.xml', '.scielo.xml', '.sgm.xml.res.tmp', '.sgm.xml.err.tmp']
         
     def output_files(self, sgml_xml_filename, report):
@@ -174,26 +179,26 @@ class MarkupPMC:
             report.write('delete ' + param_result_filename)
             os.unlink(param_result_filename)
 
-        report.write('validate_and_transform ' + self.sgml_xml_filename + ' ' + self.xsl_sgml2xml + ' ' + self.xml_scielo)
-        if self.validate_and_transform(self.sgml_xml_filename, self.xsl_sgml2xml, self.xml_scielo, False):
-            report.write('validate_and_transform ' + self.xml_scielo + ' ' + self.xsl_xml2pmc + ' ' + self.xml_pmc_local)
-            if self.validate_and_transform(self.xml_scielo, self.xsl_xml2pmc, self.xml_pmc_local, True):
-                report.write('transform ' + self.xml_pmc_local + ' '+  self.xsl_err + ' '+  self.xml_report)
-                if self.transform(self.xml_pmc_local, self.xsl_err, self.xml_report):
+        report.write('validate_and_transform ' + self.sgml_xml_filename + ' ' + self.xsl_files.xsl_sgml2xml + ' ' + self.xml_scielo)
+        if self.validate_and_transform(self.sgml_xml_filename, self.xsl_files.xsl_sgml2xml, self.xml_scielo, False):
+            report.write('validate_and_transform ' + self.xml_scielo + ' ' + self.xsl_files.xsl_xml2pmc + ' ' + self.xml_pmc_local)
+            if self.validate_and_transform(self.xml_scielo, self.xsl_files.xsl_xml2pmc, self.xml_pmc_local, True):
+                report.write('transform ' + self.xml_pmc_local + ' '+  self.xsl_files.xsl_err + ' '+  self.xml_report)
+                if self.transform(self.xml_pmc_local, self.xsl_files.xsl_err, self.xml_report):
                     # Generate report.html
-                    report.write('transform ' + self.xml_report + ' '+  self.xsl_report + ' '+  self.html_report)
-                    if self.transform(self.xml_report, self.xsl_report, self.html_report):
+                    report.write('transform ' + self.xml_report + ' '+  self.xsl_files.xsl_report + ' '+  self.html_report)
+                    if self.transform(self.xml_report, self.xsl_files.xsl_report, self.html_report):
                         report.write('done')
                     
-                report.write('transform ' + self.xml_pmc_local + ' '+  self.xsl_preview + ' '+  self.html_preview)
-                if self.transform(self.xml_pmc_local, self.xsl_preview, self.html_preview):
+                report.write('transform ' + self.xml_pmc_local + ' '+  self.xsl_files.xsl_preview + ' '+  self.html_preview)
+                if self.transform(self.xml_pmc_local, self.xsl_files.xsl_preview, self.html_preview):
                     # Generate xml (final version)
                     report.write('done')
                     self.copy_img_files_to_preview()
                     report.write('copy_img_files_to_preview')
                 
-                report.write('transform ' + self.xml_pmc_local + ' '+  self.xsl_pmc + ' '+  self.xml_pmc)
-                if self.transform(self.xml_pmc_local, self.xsl_pmc, self.xml_pmc):
+                report.write('transform ' + self.xml_pmc_local + ' '+  self.xsl_files.xsl_pmc + ' '+  self.xml_pmc)
+                if self.transform(self.xml_pmc_local, self.xsl_files.xsl_pmc, self.xml_pmc):
                     #shutil.copyfile(self.xml_pmc_local, xml_pmc)
                     report.write('Generated xml pmc final')
 
