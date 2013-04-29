@@ -120,7 +120,7 @@ if doit:
 
     report = Report(validation_path + '/report.log', validation_path + '/report.err.txt', validation_path + '/report.txt')
     xml_toolbox.xml_tree = XMLTree(TableEntities(current_path + '/reuse/encoding/entities'))
-    xml_packer = xml_toolbox.XMLPacker(pmc_path, jar_path)
+    xml_packer = xml_toolbox.XMLPacker(pmc_path, jar_path, '')
 
     
     if len(xml_filename) > 0:
