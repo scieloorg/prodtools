@@ -733,6 +733,7 @@ class ArticleXML(object):
                 for node in [self.tree.find('.')] + self.tree.xpath(
                              ".//*[@article-type]")
             )
+        return []
 
     @property
     def body_words(self):
