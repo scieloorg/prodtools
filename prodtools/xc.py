@@ -138,8 +138,8 @@ class Reception(object):
         form.display_form(
             self.proc.stage == 'xc', None, self.call_convert_package)
 
-    def call_convert_package(self, package_path):
-        self.convert_package(package_path)
+    def call_convert_package(self, package_path, optimise):
+        self.convert_package(package_path, optimise)
         return 'done', 'blue'
 
     def _create_package_instance(self, source: str, output: str, optimise: bool = False) -> SPPackage:
