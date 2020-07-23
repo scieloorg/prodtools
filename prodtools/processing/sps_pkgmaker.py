@@ -257,7 +257,7 @@ class BrokenRef(object):
 
 class PackageMaker(object):
 
-    def __init__(self, pkg_path, output_path, optimise=True, package_name=None):
+    def __init__(self, pkg_path, output_path, optimise=False, package_name=None):
         """
         Reempacota os arquivos de pacote SP,
         padronizando-os e/ou otimizando-os.
