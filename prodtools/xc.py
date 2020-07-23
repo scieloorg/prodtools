@@ -56,6 +56,7 @@ def main():
     logger.setLevel(args.loglevel.upper())
 
     package_path = args.package_path
+    optimise = args.optimise
 
     reception = Reception()
     reception.receive_package(package_path, optimise=optimise)
