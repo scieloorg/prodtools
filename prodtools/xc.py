@@ -47,6 +47,9 @@ def main():
         "package_path", nargs='?',
         help="filesystem path to the XML package folder")
     parser.add_argument('--loglevel', default='WARNING')
+    parser.add_argument('--optimise', action='store_true',
+                        help='optimise images for web '
+                             '(consume more processing time)')
 
     args = parser.parse_args()
 
@@ -55,7 +58,7 @@ def main():
     package_path = args.package_path
 
     reception = Reception()
-    reception.receive_package(package_path)
+    reception.receive_package(package_path, optimise=optimise)
 
 
 class Reception(object):
@@ -100,9 +103,9 @@ class Reception(object):
         if self.collection_acron:
             return self._receive_package_for_server(optimise)
         else:
-            return self._receive_package_for_desktop(package_path)
+            return self._receive_package_for_desktop(package_path, optimise)
 
-    def _receive_package_for_desktop(self, package_path=None):
+    def _receive_package_for_desktop(self, package_path=None, optimise=False):
         if self.collection_acron:
             raise ForbiddenOperationError(
                 "Not allowed to call receive_package_for_desktop")
@@ -110,7 +113,7 @@ class Reception(object):
             self.display_form()
         elif package_path:
             try:
-                self.convert_package(package_path)
+                self.convert_package(package_path, optimise)
             except Exception as e:
                 logger.exception(
                     "Could not receive packages for desktop of path '%s'",
