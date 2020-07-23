@@ -43,11 +43,11 @@ def execute(INTERATIVE, xml_list, GENERATE_PMC, sgmxml=None, acron=None,
     print('...'*3)
 
 
-def call_make_package_from_form(xml_path, GENERATE_PMC=False):
+def call_make_package_from_form(xml_path, GENERATE_PMC=False, optimise=False):
     xml_list = [os.path.join(xml_path, item)
                 for item in os.listdir(xml_path) if item.endswith('.xml')]
     if xml_list:
-        execute(True, xml_list, GENERATE_PMC)
+        execute(True, xml_list, GENERATE_PMC, optimise_images_for_web=optimise)
     else:
         display_form("xpm")
     return 'done', 'blue'
