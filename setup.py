@@ -62,6 +62,7 @@ setup(
                       'settings/*/*.csv',
                       'settings/*/*.fst',
                       'settings/*/*.ini',
+                      'settings/*.ico',
                       ],
         '': ['*.xsl', '*.dtd', '.ent', '*.ini', '*.xml', '*.mod', '*.txt'],
     },
