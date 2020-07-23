@@ -112,7 +112,7 @@ class XMLAppGUI(tk.Frame):
     def run_xml_package_maker(self):
         if self.is_valid_folder():
             self.started()
-            self.optimise_images_for_web = self.optimize_img_var.get() == 1
+            self.optimise_images_for_web = self.optimise_images_for_web_var.get() == 1
             self.generate_pmc_package = self.pmc_var.get() == 1
             msg, color = self.function(
                 self.selected_folder, self.generate_pmc_package,
@@ -123,7 +123,7 @@ class XMLAppGUI(tk.Frame):
     def run_xml_converter(self):
         if self.is_valid_folder():
             self.started()
-            self.optimise_images_for_web = self.optimize_img_var.get() == 1
+            self.optimise_images_for_web = self.optimise_images_for_web_var.get() == 1
             msg, color = self.function(
                 self.selected_folder, self.optimise_images_for_web)
             self.finished(color)
