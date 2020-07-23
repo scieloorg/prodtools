@@ -96,9 +96,9 @@ class Reception(object):
             )
             raise e
 
-    def receive_package(self, package_path=None):
+    def receive_package(self, package_path=None, optimise=False):
         if self.collection_acron:
-            return self._receive_package_for_server()
+            return self._receive_package_for_server(optimise)
         else:
             return self._receive_package_for_desktop(package_path)
 
@@ -123,12 +123,12 @@ class Reception(object):
                 )
                 raise
 
-    def _receive_package_for_server(self):
+    def _receive_package_for_server(self, optimise=False):
         if not self.collection_acron:
             raise ForbiddenOperationError(
                 "Not allowed to call _receive_package_for_server")
         for package_path in self._queued_packages():
-            self.convert_package(package_path)
+            self.convert_package(package_path, optimise)
             fs_utils.delete_file_or_folder(package_path)
 
     def display_form(self):
@@ -139,7 +139,7 @@ class Reception(object):
         self.convert_package(package_path)
         return 'done', 'blue'
 
-    def _create_package_instance(self, source: str, output: str) -> SPPackage:
+    def _create_package_instance(self, source: str, output: str, optimise: bool = False) -> SPPackage:
         """Cria instância da classe SPPackage para o pacote de entrada"""
 
         try:
@@ -147,10 +147,10 @@ class Reception(object):
         except (IndexError, TypeError):
             package_name = None
 
-        package_maker = PackageMaker(source, output, package_name=package_name)
+        package_maker = PackageMaker(source, output, optimise=optimise, package_name=package_name)
         return package_maker.pack()
 
-    def convert_package(self, package_path):
+    def convert_package(self, package_path, optimise=False):
         if package_path is None:
             return False
 
@@ -164,7 +164,7 @@ class Reception(object):
 
         with TemporaryDirectory() as output_path:
             try:
-                package = self._create_package_instance(source=xml_path, output=output_path)
+                package = self._create_package_instance(source=xml_path, output=output_path, optimise=optimise)
                 scilista_items, xc_status, mail_info = self.proc.convert_package(package)
             except PackageHasNoXMLFilesError:
                 logger.exception(
