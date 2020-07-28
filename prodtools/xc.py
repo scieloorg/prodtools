@@ -47,15 +47,19 @@ def main():
         "package_path", nargs='?',
         help="filesystem path to the XML package folder")
     parser.add_argument('--loglevel', default='WARNING')
+    parser.add_argument('--optimise', action='store_true',
+                        help='optimise images for web '
+                             '(consume more processing time)')
 
     args = parser.parse_args()
 
     logger.setLevel(args.loglevel.upper())
 
     package_path = args.package_path
+    optimise = args.optimise
 
     reception = Reception()
-    reception.receive_package(package_path)
+    reception.receive_package(package_path, optimise=optimise)
 
 
 class Reception(object):
@@ -96,13 +100,13 @@ class Reception(object):
             )
             raise e
 
-    def receive_package(self, package_path=None):
+    def receive_package(self, package_path=None, optimise=False):
         if self.collection_acron:
-            return self._receive_package_for_server()
+            return self._receive_package_for_server(optimise)
         else:
-            return self._receive_package_for_desktop(package_path)
+            return self._receive_package_for_desktop(package_path, optimise)
 
-    def _receive_package_for_desktop(self, package_path=None):
+    def _receive_package_for_desktop(self, package_path=None, optimise=False):
         if self.collection_acron:
             raise ForbiddenOperationError(
                 "Not allowed to call receive_package_for_desktop")
@@ -110,7 +114,7 @@ class Reception(object):
             self.display_form()
         elif package_path:
             try:
-                self.convert_package(package_path)
+                self.convert_package(package_path, optimise)
             except Exception as e:
                 logger.exception(
                     "Could not receive packages for desktop of path '%s'",
@@ -123,23 +127,23 @@ class Reception(object):
                 )
                 raise
 
-    def _receive_package_for_server(self):
+    def _receive_package_for_server(self, optimise=False):
         if not self.collection_acron:
             raise ForbiddenOperationError(
                 "Not allowed to call _receive_package_for_server")
         for package_path in self._queued_packages():
-            self.convert_package(package_path)
+            self.convert_package(package_path, optimise)
             fs_utils.delete_file_or_folder(package_path)
 
     def display_form(self):
         form.display_form(
             self.proc.stage == 'xc', None, self.call_convert_package)
 
-    def call_convert_package(self, package_path):
-        self.convert_package(package_path)
+    def call_convert_package(self, package_path, optimise):
+        self.convert_package(package_path, optimise)
         return 'done', 'blue'
 
-    def _create_package_instance(self, source: str, output: str) -> SPPackage:
+    def _create_package_instance(self, source: str, output: str, optimise: bool = False) -> SPPackage:
         """Cria instância da classe SPPackage para o pacote de entrada"""
 
         try:
@@ -147,10 +151,10 @@ class Reception(object):
         except (IndexError, TypeError):
             package_name = None
 
-        package_maker = PackageMaker(source, output, package_name=package_name)
+        package_maker = PackageMaker(source, output, optimise=optimise, package_name=package_name)
         return package_maker.pack()
 
-    def convert_package(self, package_path):
+    def convert_package(self, package_path, optimise=False):
         if package_path is None:
             return False
 
@@ -164,7 +168,7 @@ class Reception(object):
 
         with TemporaryDirectory() as output_path:
             try:
-                package = self._create_package_instance(source=xml_path, output=output_path)
+                package = self._create_package_instance(source=xml_path, output=output_path, optimise=optimise)
                 scilista_items, xc_status, mail_info = self.proc.convert_package(package)
             except PackageHasNoXMLFilesError:
                 logger.exception(

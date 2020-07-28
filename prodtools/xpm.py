@@ -23,11 +23,13 @@ def display_form(stage):
     form.display_form(stage == 'xc', None, call_make_package_from_form)
 
 
-def execute(INTERATIVE, xml_list, GENERATE_PMC, sgmxml=None, acron=None):
+def execute(INTERATIVE, xml_list, GENERATE_PMC, sgmxml=None, acron=None,
+            optimise_images_for_web=False):
     if xml_list:
         stage = 'xpm'
         xml_path = os.path.dirname(xml_list[0])
-        pkg_maker = PackageMaker(xml_path, xml_path + "_" + stage)
+        pkg_maker = PackageMaker(xml_path, xml_path + "_" + stage,
+                                 optimise=optimise_images_for_web)
         pkg = pkg_maker.pack(xml_list)
     elif sgmxml:
         stage = 'xml'
@@ -41,11 +43,11 @@ def execute(INTERATIVE, xml_list, GENERATE_PMC, sgmxml=None, acron=None):
     print('...'*3)
 
 
-def call_make_package_from_form(xml_path, GENERATE_PMC=False):
+def call_make_package_from_form(xml_path, GENERATE_PMC=False, optimise=False):
     xml_list = [os.path.join(xml_path, item)
                 for item in os.listdir(xml_path) if item.endswith('.xml')]
     if xml_list:
-        execute(True, xml_list, GENERATE_PMC)
+        execute(True, xml_list, GENERATE_PMC, optimise_images_for_web=optimise)
     else:
         display_form("xpm")
     return 'done', 'blue'
@@ -89,6 +91,10 @@ def main():
         "acron", nargs="?", default='',
         help="journal acronym, required only for the conversion of SGML to XML"
     )
+    parser.add_argument('--optimise', action='store_true',
+                        help='optimise images for web '
+                             '(consume more processing time)')
+
     parser.add_argument('--auto', action='store_true',
                         help='no user interface')
 
@@ -103,6 +109,7 @@ def main():
 
     xml_path = args.xml_path
     acron = args.acron
+    optimise = args.optimise
     INTERATIVE = not args.auto
     GENERATE_PMC = args.pmc
 
@@ -119,7 +126,8 @@ def main():
             parser.print_usage()
             parser.print_help()
         else:
-            execute(INTERATIVE, xml_list, GENERATE_PMC, sgmxml, acron)
+            execute(INTERATIVE, xml_list, GENERATE_PMC, sgmxml, acron,
+                    optimise_images_for_web=optimise)
 
 
 if __name__ == '__main__':

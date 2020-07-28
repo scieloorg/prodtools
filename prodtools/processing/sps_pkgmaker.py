@@ -257,7 +257,7 @@ class BrokenRef(object):
 
 class PackageMaker(object):
 
-    def __init__(self, pkg_path, output_path, optimise=True, package_name=None):
+    def __init__(self, pkg_path, output_path, optimise=False, package_name=None):
         """
         Reempacota os arquivos de pacote SP,
         padronizando-os e/ou otimizando-os.
@@ -412,7 +412,7 @@ class PackageMaker(object):
             logger.exception(error_msg)
             raise package.PackageHasNoXMLFilesError(error_msg)
 
-        optimise_individually = (percent < 1)
+        optimise_individually = self.optimise and (percent < 1)
 
         for item in self.source_folder.pkgfiles_items.values():
             logger.info("PackageMaker.pack %s?", item.filename)
@@ -427,7 +427,7 @@ class PackageMaker(object):
             enhanced_pkg_path = self._enhance_doc_package(
                 item, doc_outs, dtd_location_type, optimise_individually)
 
-            if self.optimise and optimise_individually:
+            if optimise_individually:
                 tmp_path = doc_outs.create_dir_at_work_path("opt")
                 self._optimise_doc_package(enhanced_pkg_path, tmp_path)
 

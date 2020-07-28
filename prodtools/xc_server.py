@@ -22,6 +22,10 @@ def main():
     parser.add_argument('--gerapadrao', action='store_true',
                         help='call gerapadrao')
     parser.add_argument('--loglevel', default='WARNING')
+    parser.add_argument('--optimise', action='store_true',
+                        help='optimise images for web '
+                             '(consume more processing time)')
+
     args = parser.parse_args()
 
     logger.setLevel(args.loglevel.upper())
@@ -29,13 +33,14 @@ def main():
     collection_acron = args.collection_acron
     call_download = args.download
     call_gerapadrao = args.gerapadrao
+    optimise = args.optimise
 
     reception = xc.Reception(collection_acron)
 
     if call_download:
         reception.download_packages()
 
-    reception.receive_package()
+    reception.receive_package(optimise=optimise)
 
     if call_gerapadrao:
         reception.gerapadrao()
