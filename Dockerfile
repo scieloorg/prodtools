@@ -22,7 +22,7 @@ RUN mkdir -p /app/markup
 RUN apt-get update -qq \
     && apt-get install -qq -y libxml2 libxslt-dev libjpeg-dev tk lib32z1 lib32z1-dev \
     && pip install --no-cache-dir -r requirements.txt \
-    && pip install --no-index --find-links=file:///deps -U SciELO_Production_Tools \
+    && pip install --no-cache-dir --find-links=file:///deps -U SciELO_Production_Tools \
     && rm requirements.txt \
     && rm -rf /deps
 
