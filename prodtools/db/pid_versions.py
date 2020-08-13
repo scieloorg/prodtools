@@ -1,6 +1,10 @@
 import sqlite3
 import logging
 
+from sqlalchemy.ext.declarative import declarative_base
+from sqlalchemy import Column, Integer, String, UniqueConstraint
+
+
 CREATE_PID_TABLE_QUERY = """
     CREATE TABLE IF NOT EXISTS pid_versions (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -9,6 +13,23 @@ CREATE_PID_TABLE_QUERY = """
         UNIQUE(v2, v3)
     );
 """
+
+
+Base = declarative_base()
+
+
+class PidVersion(Base):
+    __tablename__ = 'pid_versions'
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    v2 = Column(String(23))
+    v3 = Column(String(255))
+    __table_args__ = (
+        UniqueConstraint('v2', 'v3', name='_v2_v3_uc'),
+    )
+
+    def __repr__(self):
+        return '<PidVersion(v2="%s", v3="%s")>' % (self.v2, self.v3)
 
 
 class PIDVersionsManager:
