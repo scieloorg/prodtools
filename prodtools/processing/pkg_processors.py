@@ -369,14 +369,17 @@ class ArticlesConversion(object):
     def spf_message(self):
         if not self.sps_pkg_info:
             return ""
-        ftp = ""
+        result = False
         if self.sps_pkg_info.get("server"):
-            ftp = _("(FTP: {} | User: {})").format(
+            result = _("FTP: {} | User: {}").format(
                     self.sps_pkg_info.get("server"),
                     self.sps_pkg_info.get("user", ''))
+        elif self.sps_pkg_info.get("file"):
+            result = os.path.isfile(self.sps_pkg_info.get("file"))
+
         return html_reports.p_message(
-                _("[INFO] {} is available for SPF {}").format(
-                    self.sps_pkg_info.get("file"), ftp)
+                _("[INFO] {} is available for SPF ({})").format(
+                    self.sps_pkg_info.get("file"), result)
             )
 
 
