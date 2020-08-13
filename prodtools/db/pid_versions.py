@@ -2,7 +2,8 @@ import sqlite3
 import logging
 
 from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy import Column, Integer, String, UniqueConstraint
+from sqlalchemy import Column, Integer, String, UniqueConstraint, create_engine
+from sqlalchemy.orm import sessionmaker
 
 
 CREATE_PID_TABLE_QUERY = """
@@ -36,22 +37,35 @@ class PIDVersionsManager:
     def __init__(self, db):
         self.db = db
         self.db.cursor.execute(CREATE_PID_TABLE_QUERY)
+        self.engine = create_engine("dbname")
+        Base.metadata.create_all(self.engine)
+        self.Session = sessionmaker(bind=self.engine)
 
     def register(self, v2, v3):
-        return self.db.insert("INSERT INTO pid_versions (v2, v3) VALUES (?,?)", (v2, v3,))
+        self.session = self.Session()
+        self.session.add(PidVersion(v2=v2, v3=v3))
+        try:
+            self.session.commit()
+        except:
+            logging.debug("this item already exists in database")
+            self.session.rollback()
+            return False
+        else:
+            return True
 
     def get_pid_v3(self, v2):
-        return self.db.get_pid_v3(v2)
+        self.session = self.Session()
+        pid_register = self.session.query(PidVersion).filter_by(v2=v2).first()
+        if pid_register:
+            return pid_register.v3
 
     def pids_already_registered(self, v2, v3):
         """Verifica se a chave composta (v2 e v3) existe no banco de dadoss"""
-        result = self.db.fetch(
-            "SELECT COUNT(*) FROM pid_versions WHERE v2 = ? and v3 = ?", (v2, v3,)
-        )
-        return result[0][0] == 1
+        self.session = self.Session()
+        return self.session.query(PidVersion).filter_by(v2=v2, v3=v3).count() == 1
 
     def close(self):
-        self.db.close()
+        self.__exit__()
 
 
 class PIDVersionsDB:
