@@ -6,16 +6,6 @@ from sqlalchemy import Column, Integer, String, UniqueConstraint, create_engine
 from sqlalchemy.orm import sessionmaker
 
 
-CREATE_PID_TABLE_QUERY = """
-    CREATE TABLE IF NOT EXISTS pid_versions (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        v2 VARCHAR(23),
-        v3 VARCHAR(255),
-        UNIQUE(v2, v3)
-    );
-"""
-
-
 Base = declarative_base()
 
 
@@ -39,6 +29,18 @@ class PIDVersionsManager:
         self.engine = create_engine(name, **engine_args)
         Base.metadata.create_all(self.engine)
         self.Session = sessionmaker(bind=self.engine)
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, excution_type, excution_value, traceback):
+
+        if hasattr(self, "session") and self.session:
+            if isinstance(excution_value, Exception):
+                self.session.rollback()
+            else:
+                self.session.commit()
+            self.session.close()
 
     def register(self, v2, v3):
         self.session = self.Session()
@@ -65,50 +67,3 @@ class PIDVersionsManager:
 
     def close(self):
         self.__exit__()
-
-
-class PIDVersionsDB:
-    def __init__(self, name, timeout=60):
-        try:
-            self.conn = sqlite3.connect(name, timeout=timeout)
-            self.cursor = self.conn.cursor()
-        except sqlite3.OperationalError as e:
-            logging.exception(e)
-            raise sqlite3.OperationalError("unable to open database '%s'" % name)
-
-    def close(self):
-        if self.conn is not None:
-            self.conn.commit()
-            self.conn.close()
-
-    def __enter__(self):
-        return self
-
-    def __exit__(self, excution_type, excution_value, traceback):
-
-        if isinstance(excution_value, Exception):
-            self.conn.rollback()
-        else:
-            self.conn.commit()
-
-        self.close()
-
-    def fetch(self, sql, parameters=None):
-        self.cursor.execute(sql, parameters)
-        return self.cursor.fetchall()
-
-    def insert(self, sql, parameters):
-        try:
-            self.cursor.execute(sql, parameters)
-        except sqlite3.IntegrityError as e:
-            logging.debug("this item already exists in database")
-            return False
-        else:
-            self.conn.commit()
-            return True
-
-    def get_pid_v3(self, v2):
-        found = self.fetch("SELECT v3 FROM pid_versions WHERE v2 = ?", (v2,))
-
-        if found is not None and len(found) > 0:
-            return found[0][0]
