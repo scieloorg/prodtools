@@ -20,10 +20,6 @@ from prodtools.data.package import PackageHasNoXMLFilesError
 from prodtools.data import kernel_document
 from prodtools.db import xc_models
 from prodtools.db.serial import WebsiteFiles
-from prodtools.db.pid_versions import(
-    PIDVersionsManager,
-    PIDVersionsDB,
-)
 from prodtools.processing import pmc_pkgmaker
 from prodtools.db.pid_versions import PIDVersionsManager
 
