@@ -436,8 +436,8 @@ class PkgProcessor(object):
         conversion = ArticlesConversion(registered_issue_data, pkg, pkg_eval_result, not self.config.interative_mode, self.config.local_web_app_path, self.config.web_app_site)
 
         if self.config.pid_manager_info:
-            with PIDVersionsDB(self.config.pid_manager_info) as db:
-                conversion.register_pids_and_update_xmls(PIDVersionsManager(db))
+            with PIDVersionsManager(self.config.pid_manager_info) as db:
+                conversion.register_pids_and_update_xmls(db)
 
         scilista_items = conversion.convert()
 

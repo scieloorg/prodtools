@@ -34,10 +34,9 @@ class PidVersion(Base):
 
 
 class PIDVersionsManager:
-    def __init__(self, db):
-        self.db = db
-        self.db.cursor.execute(CREATE_PID_TABLE_QUERY)
-        self.engine = create_engine("dbname")
+    def __init__(self, name, timeout=None):
+        engine_args = {"pool_timeout": timeout} if timeout else {}
+        self.engine = create_engine(name, **engine_args)
         Base.metadata.create_all(self.engine)
         self.Session = sessionmaker(bind=self.engine)
 
