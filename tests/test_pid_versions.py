@@ -1,24 +1,24 @@
 import os
 import tempfile
 import unittest
-import sqlite3
+import sqlalchemy
 
-from prodtools.db.pid_versions import PIDVersionsManager, PIDVersionsDB
+from prodtools.db.pid_versions import PIDVersionsManager
 
 
 class TestPIDVersionsManager(unittest.TestCase):
     def setUp(self):
-        self.temporary_db = tempfile.mkstemp()[-1]
-        self.manager = PIDVersionsManager(db=PIDVersionsDB(self.temporary_db))
+        self.temporary_db = tempfile.mkstemp(suffix=".db")[-1]
+        self.manager = PIDVersionsManager("sqlite:///" + self.temporary_db)
         self.manager.register("pid-2", "pid-3")
 
     def tearDown(self):
         os.remove(self.temporary_db)
 
     def test_should_raise_exception_when_could_not_open_database_file(self):
-        with self.assertRaises(sqlite3.OperationalError):
+        with self.assertRaises(sqlalchemy.exc.ArgumentError):
             fake_db_file = os.path.join(tempfile.gettempdir(), "fake-folder", "fake-file.db")
-            PIDVersionsDB(fake_db_file)
+            PIDVersionsManager(fake_db_file)
             os.remove(fake_db_file)
 
     def test_should_insert_a_pair_of_pids(self):
