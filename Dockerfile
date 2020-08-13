@@ -20,7 +20,7 @@ COPY requirements.txt .
 RUN mkdir -p /app/markup
 
 RUN apt-get update -qq \
-    && apt-get install -qq -y libxml2 libxslt-dev libjpeg-dev tk lib32z1 lib32z1-dev \
+    && apt-get install -qq -y libxml2 libxslt-dev libjpeg-dev tk lib32z1 lib32z1-dev postgresql \
     && pip install --no-cache-dir -r requirements.txt \
     && pip install --no-cache-dir --find-links=file:///deps -U SciELO_Production_Tools \
     && rm requirements.txt \
