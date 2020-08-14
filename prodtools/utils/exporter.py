@@ -76,7 +76,12 @@ class Exporter(object):
             final_file_path = self._preppend_time_to_destination_filename(
                 dest_path, zip_file_path
             )
+            exp_logger.info("Exporter: move %s to %s", zip_file_path, final_file_path)
             shutil.move(zip_file_path, final_file_path)
+            if os.path.isfile(final_file_path):
+                exp_logger.info("Exporter: %s created", final_file_path)
+            else:
+                exp_logger.error("Exporter: %s not found", final_file_path)
 
             if not destination_path and ftp_configuration:
                 server, user, password, remote_path = ftp_configuration
