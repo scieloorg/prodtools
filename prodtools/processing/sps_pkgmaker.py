@@ -90,7 +90,7 @@ class SPSXMLContent(xml_utils.SuitableXML):
             xpath = ".//contrib-id[@contrib-id-type='{}']".format(
                 contrib_id_type)
             for contrib_id in self.xml.findall(xpath):
-                if uri in contrib_id.text:
+                if contrib_id.text and uri in contrib_id.text:
                     contrib_id.text = contrib_id.text.replace(uri, "")
 
     def remove_attributes(self):

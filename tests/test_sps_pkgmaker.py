@@ -82,6 +82,33 @@ class TestSPSXMLContent(TestCase):
              for contrib_id in obj.xml.findall(".//contrib-id")]
         )
 
+    def test_remove_uri_off_contrib_id_without_contrib_id(self):
+        text = """<contrib-group>
+        <contrib contrib-type="author">
+            <contrib-id contrib-id-type="orcid"/>
+            <name>
+                <surname>Einstein</surname>
+                <given-names>Albert</given-names>
+            </name>
+        </contrib>
+        <contrib contrib-type="author">
+            <contrib-id contrib-id-type="lattes">https://lattes.cnpq.br/4760273612238540</contrib-id>
+            <name>
+                <surname>Meneghini</surname>
+                <given-names>Rogerio</given-names>
+            </name>
+        </contrib></contrib-group>"""
+        obj = sps_pkgmaker.SPSXMLContent(text)
+        obj.remove_uri_off_contrib_id()
+        self.assertEqual(
+            ['4760273612238540'],
+            [
+                contrib_id.text
+                for contrib_id in obj.xml.findall(".//contrib-id")
+                if contrib_id.text
+            ]
+        )
+
 
 class TestBrokenRef(TestCase):
 
