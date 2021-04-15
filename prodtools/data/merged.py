@@ -45,7 +45,13 @@ class GroupedDocuments(object):
         grouped_docs.values: article.Article
         """
         self.grouped_docs = grouped_docs
-        self.ERROR_LEVEL_FOR_UNIQUE_VALUES = {'order': validation_status.STATUS_BLOCKING_ERROR, 'doi': validation_status.STATUS_BLOCKING_ERROR, 'elocation id': validation_status.STATUS_BLOCKING_ERROR, 'fpage-lpage-seq-elocation-id': validation_status.STATUS_ERROR}
+
+        self.ERROR_LEVEL_FOR_UNIQUE_VALUES = {
+            'order': validation_status.STATUS_BLOCKING_ERROR,
+            'doi': validation_status.STATUS_FATAL_ERROR,
+            'elocation id': validation_status.STATUS_BLOCKING_ERROR,
+            'fpage-lpage-seq-elocation-id': validation_status.STATUS_ERROR,
+        }
         if not is_db_generation:
             self.ERROR_LEVEL_FOR_UNIQUE_VALUES['order'] = validation_status.STATUS_WARNING
         self.IGNORE_NONE = ['journal-id (nlm-ta)', 'e-ISSN', 'print ISSN', ]
