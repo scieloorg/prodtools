@@ -720,6 +720,8 @@ class IssueModels(object):
             validations = []
             validations.append(('publisher', article.publisher_name, self.issue.publisher_name, validation_status.STATUS_ERROR))
             for label, article_data, issue_data, status in validations:
+                if article_data is None:
+                    article_data = ''
                 if utils.how_similar(article_data, issue_data) < 0.8:
                     if article_data not in issue_data:
                         _msg = _('{label}: "{value1}" ({label1}) and "{value2}" ({label2}) do not match. ').format(label=label, value1=article_data, label1=_('article'), value2=issue_data, label2=_('issue'))
