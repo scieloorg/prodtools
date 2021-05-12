@@ -11,18 +11,22 @@ from copy import deepcopy
 from prodtools.data import kernel_document
 
 
-class Article:
-    def __init__(self, scielo_id, scielo_pid):
-        self.scielo_id = scielo_id
-        self.scielo_pid = scielo_pid
+class MockArticle:
+    def __init__(self, pid_v3, pid_v2):
+        # este atributo não existe no Article real
+        self._scielo_pid = pid_v2
+
+        # estes atributos existem no Article real
+        self.scielo_id = pid_v3
         self.registered_scielo_id = None
         self.registered_aop_pid = None
         self.order = "12345"
 
     def get_scielo_pid(self, name):
+        # simula o get_scielo_pid real
         if name == "v3":
             return self.scielo_id
-        return self.scielo_pid
+        return self._scielo_pid
 
 
 class TestKernelDocumentAddArticleIdToReceivedDocuments(unittest.TestCase):
@@ -59,18 +63,22 @@ class TestKernelDocumentAddArticleIdToReceivedDocuments(unittest.TestCase):
         return "brzWFrVFdpYMXdpvq7dDJBQ"
 
     def test_add_article_id_to_received_documents(self):
-        registered = {}
-        registered.update({"file1": Article(None, None)})
-        registered.update({"file2": Article("xyzwx", None)})
-        registered.update({"file3": Article(None, "09873")})
-        registered.update({"file4": Article("Akouuad", "83847")})
-
-        received = deepcopy(registered)
-        file_paths = {}
-        for fname in self.files:
-            name, ext = os.path.splitext(fname)
-            received.update({name: Article(None, None)})
-            file_paths.update({name: fname})
+        registered = {
+            "file1": MockArticle(None, None),
+            "file2": MockArticle("xyzwx", None),
+            "file3": MockArticle(None, "09873"),
+            "file4": MockArticle("Akouuad", "83847"),
+        }
+        received = {
+            "file1": MockArticle(None, None),
+            "file2": MockArticle(None, None),
+            "file3": MockArticle(None, None),
+            "file4": MockArticle(None, None),
+        }
+        file_paths = {
+            name: fname
+            for name, fname in zip(registered.keys(), self.files)
+        }
         issn_id = "9876-3456"
         year_and_order = "20173"
 
@@ -85,11 +93,11 @@ class TestKernelDocumentAddArticleIdToReceivedDocuments(unittest.TestCase):
 
         for name, item in received.items():
             registered_doc = registered.get(name)
-            if registered_doc and registered_doc.scielo_id:
-                expected_scielo_id = registered_doc.scielo_id
-            else:
-                expected_scielo_id = "xxxxxx"
+
+            expected_scielo_id = "xxxxxx"
             with self.subTest(name):
+                # é esperado que item.registered_scielo_id seja atualizado com
+                # xxxxxx, mesmo que já tinha outro valor
                 self.assertEqual(item.registered_scielo_id, expected_scielo_id)
                 with open(file_paths[name], "r") as fp:
                     content = fp.read()
@@ -100,7 +108,7 @@ class TestKernelDocumentAddArticleIdToReceivedDocuments(unittest.TestCase):
                     self.assertIn(expected_scielo_id, content)
 
     def test_pid_manager_should_use_aop_pid_to_search_pid_v3_from_database(self,):
-        def _update_article_with_aop_pid(article: Article):
+        def _update_article_with_aop_pid(article: MockArticle):
             article.registered_aop_pid = "AOPPID"
 
         mock_pid_manager = Mock()
@@ -110,7 +118,7 @@ class TestKernelDocumentAddArticleIdToReceivedDocuments(unittest.TestCase):
             pid_manager=mock_pid_manager,
             issn_id="9876-3456",
             year_and_order="20173",
-            received_docs={"file1": Article(None, None)},
+            received_docs={"file1": MockArticle(None, None)},
             documents_in_isis={},
             file_paths={},
             update_article_with_aop_status=_update_article_with_aop_pid,
@@ -131,7 +139,7 @@ class TestKernelDocumentAddArticleIdToReceivedDocuments(unittest.TestCase):
             pid_manager=mock_pid_manager,
             issn_id="9876-3456",
             year_and_order="20173",
-            received_docs={"file1": Article("brzWFrVFdpYMXdpvq7dDJBQ", None)},
+            received_docs={"file1": MockArticle("brzWFrVFdpYMXdpvq7dDJBQ", None)},
             documents_in_isis={},
             file_paths={},
             update_article_with_aop_status=lambda _: _,
@@ -204,7 +212,7 @@ class TestKernelDocumentAddArticleIdToReceivedDocuments(unittest.TestCase):
             pid_manager=Mock(),
             issn_id="9876-3456",
             year_and_order="20173",
-            received_docs={"file1": Article("pid-v3", None)},
+            received_docs={"file1": MockArticle("pid-v3", None)},
             documents_in_isis={},
             file_paths={"file1": "file1.xml"},
             update_article_with_aop_status=lambda _: _,

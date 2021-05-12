@@ -63,8 +63,7 @@ def add_article_id_to_received_documents(
 
         if pid_v3 is None:
             pid_v3 = (
-                documents_in_isis.get(xml_name, article).scielo_id
-                or pid_manager.get_pid_v3(article.registered_aop_pid)
+                pid_manager.get_pid_v3(article.registered_aop_pid)
                 or pid_manager.get_pid_v3(pid_v2)
                 or scielo_id_gen.generate_scielo_pid()
             )
