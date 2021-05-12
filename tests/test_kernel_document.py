@@ -93,11 +93,11 @@ class TestKernelDocumentAddArticleIdToReceivedDocuments(unittest.TestCase):
 
         for name, item in received.items():
             registered_doc = registered.get(name)
-            if registered_doc and registered_doc.scielo_id:
-                expected_scielo_id = registered_doc.scielo_id
-            else:
-                expected_scielo_id = "xxxxxx"
+
+            expected_scielo_id = "xxxxxx"
             with self.subTest(name):
+                # é esperado que item.registered_scielo_id seja atualizado com
+                # xxxxxx, mesmo que já tinha outro valor
                 self.assertEqual(item.registered_scielo_id, expected_scielo_id)
                 with open(file_paths[name], "r") as fp:
                     content = fp.read()
