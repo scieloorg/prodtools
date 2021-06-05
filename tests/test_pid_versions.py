@@ -60,6 +60,25 @@ class TestPIDVersionsManager(unittest.TestCase):
             self.manager.session.add.call_args_list,
         )
 
+    def test_search_by_first_of_prev_or_v2(self):
+        self.manager.session.add(PidVersion(v2='prev_pid', v3='prev_v3'))
+        self.manager.session.add(PidVersion(v2='pid', v3='any_v3'))
+        self.manager.session.commit()
+
+        q = self.manager.session.query(PidVersion)
+
+        rec_prev = q.filter_by(v2='prev_pid').all()
+        rec_v2 = q.filter_by(v2='pid').all()
+        data = self.manager._search_by_first_of_prev_or_v2(
+            q, v2='pid', prev='prev_pid',
+            v2_records=rec_v2,
+            prev_records=rec_prev,
+        )
+        self.assertEqual(('pid', 'prev_v3', 'prev_pid'), data)
+
+
+
+
     # def test_pid_manager_should_use_aop_pid_to_search_pid_v3_from_database(self,):
     #     def _update_article_with_aop_pid(article: MockArticle):
     #         article.registered_aop_pid = "AOPPID"
