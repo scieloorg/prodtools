@@ -12,14 +12,14 @@ from prodtools.data import kernel_document
 
 
 class MockArticle:
-    def __init__(self, pid_v3, pid_v2):
+    def __init__(self, pid_v3, pid_v2, previous_pid=None):
         # este atributo não existe no Article real
         self._scielo_pid = pid_v2
 
         # estes atributos existem no Article real
         self.scielo_id = pid_v3
         self.registered_scielo_id = None
-        self.registered_aop_pid = None
+        self.registered_aop_pid = previous_pid
         self.order = "12345"
 
     def get_scielo_pid(self, name):
@@ -64,16 +64,17 @@ class TestKernelDocumentAddArticleIdToReceivedDocuments(unittest.TestCase):
 
     def test_add_article_id_to_received_documents(self):
         registered = {
-            "file1": MockArticle(None, None),
+            "file1": MockArticle(None, None, "005012345"),
             "file2": MockArticle("xyzwx", None),
             "file3": MockArticle(None, "09873"),
             "file4": MockArticle("Akouuad", "83847"),
         }
         received = {
-            "file1": MockArticle(None, None),
-            "file2": MockArticle(None, None),
-            "file3": MockArticle(None, None),
-            "file4": MockArticle(None, None),
+            "file1": MockArticle(
+                "anyv3", 'S9876-34562017000312345', "005012345"),
+            "file2": MockArticle(None, None, "005012340"),
+            "file3": MockArticle(None, "33333"),
+            "file4": MockArticle("44444", None),
         }
         file_paths = {
             name: fname
@@ -83,69 +84,43 @@ class TestKernelDocumentAddArticleIdToReceivedDocuments(unittest.TestCase):
         year_and_order = "20173"
 
         mock_pid_manager = Mock()
-        mock_pid_manager.get_pid_v3.return_value = None
+        mock_pid_manager.manage.side_effect = [
+            ('S9876-34562017000312345', "anyv3", "005012345"),
+            ('S9876-34562017000312345', "xxxxxx", "005012340"),
+            ('33333', "xxxxxx", None),
+            ('S9876-34562017000312345', "44444", None),
+        ]
 
-        kernel_document.scielo_id_gen.generate_scielo_pid = Mock(return_value="xxxxxx")
+        kernel_document.scielo_id_gen.generate_scielo_pid = Mock(
+            return_value="xxxxxx")
         kernel_document.add_article_id_to_received_documents(
             mock_pid_manager, issn_id, year_and_order, received,
             registered, file_paths, lambda x:x
         )
 
-        for name, item in received.items():
+        expected_items = [
+            ('S9876-34562017000312345', "anyv3", "005012345"),
+            ('S9876-34562017000312345', "xxxxxx", "005012340"),
+            ('33333', "xxxxxx", None),
+            ('S9876-34562017000312345', "44444", None),
+        ]
+        for recv, expected in zip(received.items(), expected_items):
+            name, item = recv
             registered_doc = registered.get(name)
-
-            expected_scielo_id = "xxxxxx"
             with self.subTest(name):
-                # é esperado que item.registered_scielo_id seja atualizado com
-                # xxxxxx, mesmo que já tinha outro valor
-                self.assertEqual(item.registered_scielo_id, expected_scielo_id)
+                self.assertEqual(item.registered_scielo_id, expected[1])
+
                 with open(file_paths[name], "r") as fp:
                     content = fp.read()
-                    self.assertIn("article-id", content)
-                    self.assertIn("S9876-34562017000312345", content)
-                    self.assertIn('specific-use="scielo-v3"', content)
-                    self.assertIn('specific-use="scielo-v2"', content)
-                    self.assertIn(expected_scielo_id, content)
+                    print(content)
 
-    def test_pid_manager_should_use_aop_pid_to_search_pid_v3_from_database(self,):
-        def _update_article_with_aop_pid(article: MockArticle):
-            article.registered_aop_pid = "AOPPID"
+                q = len([e for e in expected if e])
+                print([e for e in expected if e])
+                self.assertEqual(content.count("<article-id "), q)
 
-        mock_pid_manager = Mock()
-        mock_pid_manager.get_pid_v3 = self._return_scielo_pid_v3_if_aop_pid_match
-
-        kernel_document.add_article_id_to_received_documents(
-            pid_manager=mock_pid_manager,
-            issn_id="9876-3456",
-            year_and_order="20173",
-            received_docs={"file1": MockArticle(None, None)},
-            documents_in_isis={},
-            file_paths={},
-            update_article_with_aop_status=_update_article_with_aop_pid,
-        )
-
-        mock_pid_manager.register.assert_called_with(
-            "S9876-34562017000312345",
-            "pid-v3-registrado-anteriormente-para-documento-aop",
-        )
-
-    def test_pid_manager_should_try_to_register_pids_even_it_already_exists_in_xml(
-        self,
-    ):
-
-        mock_pid_manager = Mock()
-
-        kernel_document.add_article_id_to_received_documents(
-            pid_manager=mock_pid_manager,
-            issn_id="9876-3456",
-            year_and_order="20173",
-            received_docs={"file1": MockArticle("brzWFrVFdpYMXdpvq7dDJBQ", None)},
-            documents_in_isis={},
-            file_paths={},
-            update_article_with_aop_status=lambda _: _,
-        )
-
-        self.assertTrue(mock_pid_manager.register.called)
+                for i in expected:
+                    if i:
+                        self.assertIn(">{}<".format(i), content)
 
     def test_add_pids_to_etree_should_return_none_if_etree_is_not_valid(self):
         self.assertIsNone(kernel_document.add_article_id_to_etree(None, []))
@@ -161,7 +136,7 @@ class TestKernelDocumentAddArticleIdToReceivedDocuments(unittest.TestCase):
             </article>"""
         )
         _tree = kernel_document.add_article_id_to_etree(
-            tree, [("random-pid", "pid-v3",)]
+            tree, {"pid-v3": "random-pid"}
         )
         self.assertIn(
             b'<article-id specific-use="pid-v3" pub-id-type="publisher-id">random-pid</article-id>',
@@ -170,7 +145,7 @@ class TestKernelDocumentAddArticleIdToReceivedDocuments(unittest.TestCase):
 
     def test_add_pids_to_etree_should_not_modify_the_documents_doctype(self):
         _tree = kernel_document.add_article_id_to_etree(
-            self.tree, [("random-pid", "pid-v3",)]
+            self.tree, {"pid-v3": "random-pid"}
         )
         self.assertIn(
             b"""<!DOCTYPE article PUBLIC "-//NLM//DTD JATS (Z39.96) Journal Publishing DTD v1.1 20151215//EN" "https://jats.nlm.nih.gov/publishing/1.1/JATS-journalpublishing1.dtd">""",
@@ -208,8 +183,13 @@ class TestKernelDocumentAddArticleIdToReceivedDocuments(unittest.TestCase):
 
     @patch("prodtools.data.kernel_document.write_etree_to_file")
     def test_should_call_the_write_etree_to_file_when_the_pid_list_isnt_empty(self, mk):
+        mock_pid_manager = Mock()
+        mock_pid_manager.manage.side_effect = [
+            ('S9876-34562017000312345', "pid-v3", None),
+        ]
+
         kernel_document.add_article_id_to_received_documents(
-            pid_manager=Mock(),
+            pid_manager=mock_pid_manager,
             issn_id="9876-3456",
             year_and_order="20173",
             received_docs={"file1": MockArticle("pid-v3", None)},

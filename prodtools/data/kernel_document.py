@@ -75,7 +75,13 @@ def add_article_id_to_etree(
         )
         return None
 
-    for id_value, specific_use in pid_and_specific_use_items:
+    for specific_use, id_value in pid_and_specific_use_items.items():
+        if not id_value:
+            continue
+        node = article_meta.find(
+                ".//article-meta[@specific_use='{}']".format(specific_use))
+        if node is not None and node.text != id_value:
+            continue
         article_id = etree.Element("article-id")
         article_id.text = id_value
         article_id.set("specific-use", specific_use)
@@ -147,23 +153,24 @@ def old_register_pids_in_pid_manager(pid_manager, article, issn_id, year_and_ord
 
 
 def new_register_pids_in_pid_manager(pid_manager, article, issn_id, year_and_order):
-    pids_to_append_in_xml = []
+    pids_to_append_in_xml = {}
 
     previous_pid = article.registered_aop_pid
-    if previous_pid:
-        # anota para ser incluído no XML
-        pids_to_append_in_xml.append((previous_pid, "previous-pid"))
+
+    # anota para ser incluído no XML
+    pids_to_append_in_xml["previous-pid"] = previous_pid
 
     # v2
     pid_v2 = article.get_scielo_pid("v2")
     if pid_v2 is None:
         pid_v2 = get_scielo_pid_v2(issn_id, year_and_order, article.order)
         # anota para ser incluído no XML
-        pids_to_append_in_xml.append((pid_v2, "scielo-v2"))
+    pids_to_append_in_xml["scielo-v2"] = pid_v2
 
     # v3
     pid_v3 = article.get_scielo_pid("v3")
-
+    pids_to_append_in_xml["scielo-v3"] = pid_v3
+    
     # manage
     result = pid_manager.manage(
         pid_v2, pid_v3, previous_pid, scielo_id_gen.generate_scielo_pid,
@@ -171,7 +178,7 @@ def new_register_pids_in_pid_manager(pid_manager, article, issn_id, year_and_ord
     if result:
         v2, v3, prev = result
         article.registered_scielo_id = v3
-        pids_to_append_in_xml.append((v3, "scielo-v3"))
+        pids_to_append_in_xml["scielo-v3"] = v3
 
     return pids_to_append_in_xml
 
