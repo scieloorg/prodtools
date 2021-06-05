@@ -149,3 +149,45 @@ def register_pids_in_pid_manager(pid_manager, article, issn_id, year_and_order):
             " The following exception was captured."
         )
     return pids_to_append_in_xml
+
+
+def _register_pids_in_pid_manager(pid_manager, article, issn_id, year_and_order):
+    pid_v2 = article.get_scielo_pid("v2")
+    pid_v3 = article.get_scielo_pid("v3")
+    pids_to_append_in_xml = []
+    # Compara o artigo com a base de artigos AOP
+    # Caso a semelhança entre os artigos seja maior que 80%
+    # O artigo recebe o PID de AOP, observável pela
+    # propriedade `registered_aop_pid`
+    update_article_with_aop_status(article)
+
+    if pid_v2 and pid_v3:
+        exists_in_database = pid_manager.pids_already_registered(pid_v2, pid_v3)
+
+        if not exists_in_database:
+            pid_manager.register(pid_v2, pid_v3)
+
+        return pids_to_append_in_xml
+
+    if pid_v2 is None:
+        pid_v2 = get_scielo_pid_v2(issn_id, year_and_order, article.order)
+        pids_to_append_in_xml.append((pid_v2, "scielo-v2"))
+
+    if pid_v3 is None:
+        pid_v3 = (
+            pid_manager.get_pid_v3(article.registered_aop_pid)
+            or pid_manager.get_pid_v3(pid_v2)
+            or scielo_id_gen.generate_scielo_pid()
+        )
+        article.registered_scielo_id = pid_v3
+        pids_to_append_in_xml.append((pid_v3, "scielo-v3"))
+
+    try:
+        pid_manager.register(pid_v2, pid_v3)
+    except sqlite3.OperationalError:
+        LOGGER.exception(
+            "Could not update sql database with pid v2 and v3."
+            " The following exception was captured."
+        )
+    return pids_to_append_in_xml
+
