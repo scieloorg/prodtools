@@ -169,19 +169,14 @@ class PIDVersionsManager:
             # há pelo menos 1 registro encontrado, de prev ou de v2
             # garantir que exista 1 registro de (v2, v3)
             # garantir que exista 1 registro de (prev, v3), se aplicável
-
-            # apaga os registros excedentes, se existirem
-            self._remove_records(prev_records[1:])
-            self._remove_records(v2_records[1:])
-
-            # cria registro, se não existir
             to_register = []
-            if prev and len(prev_records) == 0:
-                # adicionar registro com o par (prev, v3), se não existir
-                to_register.append((prev, v3))
-            if v2 and len(v2_records) == 0:
-                # adicionar registro com o par (v2, v3), se não existir
-                to_register.append((v2, v3))
+            for pid, records in ((prev, prev_records), (v2, v2_records)):
+                # apaga os registros excedentes, se existirem
+                self._remove_records(records[1:])
+                # cria registro, se não existir
+                if pid and len(records) == 0:
+                    # adicionar registro com o par (pid, v3), se não existir
+                    to_register.append((pid, v3))
             self._add_records(to_register)
             # finaliza
             return (v2, v3, prev)
