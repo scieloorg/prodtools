@@ -40,14 +40,12 @@ def add_article_id_to_received_documents(
     """
 
     for xml_name, article in received_docs.items():
+        # Atribui `previous_pid` da base AOP (`article.registered_aop_pid`)
+        update_article_with_aop_status(article)
         pids_to_append_in_xml = new_register_pids_in_pid_manager(
             pid_manager, article, issn_id, year_and_order)
-        if pids_to_append_in_xml:
-            file_path = file_paths.get(xml_name)
-            if file_path is None:
-                LOGGER.debug("Could not find XML path for '%s' xml.", xml_name)
-                return None
-            update_article_xml_file_with_pids(file_path, pids_to_append_in_xml)
+        update_article_xml_file_with_pids(
+            file_paths.get(xml_name), pids_to_append_in_xml)
 
 
 def get_scielo_pid_v2(issn_id, year_and_order, order_in_issue):
@@ -101,6 +99,8 @@ def write_etree_to_file(tree: etree.ElementTree, path: str) -> None:
 def update_article_xml_file_with_pids(file_path, pids_to_append_in_xml):
     if not pids_to_append_in_xml:
         return
+    if not file_path:
+        return
     try:
         tree = xml_utils.get_xml_object(file_path)
     except xml_utils.etree.XMLSyntaxError:
@@ -114,11 +114,6 @@ def old_register_pids_in_pid_manager(pid_manager, article, issn_id, year_and_ord
     pid_v2 = article.get_scielo_pid("v2")
     pid_v3 = article.get_scielo_pid("v3")
     pids_to_append_in_xml = []
-    # Compara o artigo com a base de artigos AOP
-    # Caso a semelhança entre os artigos seja maior que 80%
-    # O artigo recebe o PID de AOP, observável pela
-    # propriedade `registered_aop_pid`
-    update_article_with_aop_status(article)
 
     if pid_v2 and pid_v3:
         exists_in_database = pid_manager.pids_already_registered(pid_v2, pid_v3)
@@ -154,8 +149,6 @@ def old_register_pids_in_pid_manager(pid_manager, article, issn_id, year_and_ord
 def new_register_pids_in_pid_manager(pid_manager, article, issn_id, year_and_order):
     pids_to_append_in_xml = []
 
-    # Obtém `previous_pid` da base AOP (`article.registered_aop_pid`)
-    update_article_with_aop_status(article)
     previous_pid = article.registered_aop_pid
     if previous_pid:
         # anota para ser incluído no XML
