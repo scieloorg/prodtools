@@ -108,10 +108,7 @@ class PIDVersionsManager:
             # apaga os registros
             self._remove_records(v3_records)
             # registra os pares (v2, v3) e (prev, v3), se existir
-            for pid_v2 in (v2, prev):
-                if pid_v2:
-                    # adicionar registros com o par (pid_v2, v3)
-                    self.session.add(PidVersion(v2=pid_v2, v3=v3))
+            self._add_records(((v2, v3), (prev, v3)))
             # finaliza
             return (v2, v3, prev)
 
@@ -148,10 +145,7 @@ class PIDVersionsManager:
             # gera um v3
             v3 = v3_gen()
             # registra os pares (v2, v3) e/ou (prev, v3)
-            for pid_v2 in (v2, prev):
-                if pid_v2:
-                    # adicionar registros com o par (pid_v2, v3)
-                    self.session.add(PidVersion(v2=pid_v2, v3=v3))
+            self._add_records(((v2, v3), (prev, v3)))
             # finaliza
             return (v2, v3, prev)
 
@@ -181,12 +175,14 @@ class PIDVersionsManager:
             self._remove_records(v2_records[1:])
 
             # cria registro, se não existir
+            to_register = []
             if prev and len(prev_records) == 0:
                 # adicionar registro com o par (prev, v3), se não existir
-                self.session.add(PidVersion(v2=prev, v3=v3))
+                to_register.append((prev, v3))
             if v2 and len(v2_records) == 0:
                 # adicionar registro com o par (v2, v3), se não existir
-                self.session.add(PidVersion(v2=v2, v3=v3))
+                to_register.append((v2, v3))
+            self._add_records(to_register)
             # finaliza
             return (v2, v3, prev)
 
@@ -195,10 +191,8 @@ class PIDVersionsManager:
         """
         Consulta os registros pelo `previous_pid` ou `v2`.
         Mas os registros encontrados contém mais de um valor para `v3`.
-
-        Obtém o primeiro registro,
-        considerando a sequencia de prioridade `previous_pid` ou `v2`,
-        valem os dados do primeiro encontrado.
+        Adota a abordagem anterior que era de obter o primeiro registro,
+        considerando a sequencia de prioridade `previous_pid` ou `v2`.
         """
         record = (
             prev and q.filter_by(v2=prev).first() or
@@ -208,6 +202,14 @@ class PIDVersionsManager:
             self._remove_records(prev_records, record)
             self._remove_records(v2_records, record)
             return (v2, record.v3, prev)
+
+    def _add_records(self, v2_and_v3_items):
+        """
+        Adiciona os registros
+        """
+        for v2, v3 in v2_and_v3_items:
+            if v2 and v3:
+                self.session.add(PidVersion(v2=v2, v3=v3))
 
     def _remove_records(self, records, skip=None):
         """
