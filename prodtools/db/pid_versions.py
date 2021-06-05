@@ -105,9 +105,8 @@ class PIDVersionsManager:
         # obtém os registros em que há `v3` igual a `v3`
         v3_records = [] or v3 and q.filter_by(v3=v3).all()
         if v3_records:
-            for rec in v3_records:
-                # apaga os registros
-                self.session.delete(rec)
+            # apaga os registros
+            self._remove_records(v3_records)
             # registra os pares (v2, v3) e (prev, v3), se existir
             for pid_v2 in (v2, prev):
                 if pid_v2:
@@ -167,13 +166,19 @@ class PIDVersionsManager:
             v3 = v3_values.pop()
 
             # pelo menos 1 registro encontrado, de prev ou de v2 ou de ambos
+
             if len(prev_records) == len(v2_records) == 1:
-                # ambos
+                # há 1 registro encontrado de prev e de v2
                 # finaliza
                 return (v2, v3, prev)
 
+            # há pelo menos 1 registro encontrado, de prev ou de v2
+            # garantir que exista 1 registro de (v2, v3)
+            # garantir que exista 1 registro de (prev, v3), se aplicável
+
             # apaga os registros excedentes, se existirem
-            self._remove_exceding_records((prev_records[1:], v2_records[1:]))
+            self._remove_records(prev_records[1:])
+            self._remove_records(v2_records[1:])
 
             # cria registro, se não existir
             if prev and len(prev_records) == 0:
@@ -200,18 +205,17 @@ class PIDVersionsManager:
             v2 and q.filter_by(v2=v2).first()
         )
         if record:
-            self._remove_exceding_records((prev_records, v2_records), [record])
+            self._remove_records(prev_records, record)
+            self._remove_records(v2_records, record)
             return (v2, record.v3, prev)
 
-    def _remove_exceding_records(self, group_of_records, valid_records=None):
+    def _remove_records(self, records, skip=None):
         """
-        Apaga os registros excedentes, se existirem
+        Apaga os registros, exceto `skip`
         """
-        valid_records = valid_records or []
-        for records in group_of_records:
-            for rec in records:
-                if rec not in valid_records:
-                    self.session.delete(rec)
+        for rec in records:
+            if rec != skip:
+                self.session.delete(rec)
 
     def close(self):
         self.__exit__()
