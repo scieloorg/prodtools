@@ -164,17 +164,18 @@ class PIDVersionsManager:
         Possível encontrar de 1 a n registros.
         """
         if len(v3_values) == 1:
+            v3 = v3_values.pop()
+
             # pelo menos 1 registro encontrado, de prev ou de v2 ou de ambos
             if len(prev_records) == len(v2_records) == 1:
                 # ambos
                 # finaliza
-                return (v2, None, prev)
+                return (v2, v3, prev)
 
             # apaga os registros excedentes, se existirem
             self._remove_exceding_records((prev_records[1:], v2_records[1:]))
 
             # cria registro, se não existir
-            v3 = v3_values.pop()
             if prev and len(prev_records) == 0:
                 # adicionar registro com o par (prev, v3), se não existir
                 self.session.add(PidVersion(v2=prev, v3=v3))
