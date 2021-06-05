@@ -1,4 +1,3 @@
-import sqlite3
 import logging
 
 from sqlalchemy.ext.declarative import declarative_base
