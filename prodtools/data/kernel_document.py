@@ -152,14 +152,24 @@ def register_pids_in_pid_manager(pid_manager, article, issn_id, year_and_order):
 
 
 def _register_pids_in_pid_manager(pid_manager, article, issn_id, year_and_order):
-    pid_v2 = article.get_scielo_pid("v2")
-    pid_v3 = article.get_scielo_pid("v3")
     pids_to_append_in_xml = []
-    # Compara o artigo com a base de artigos AOP
-    # Caso a semelhança entre os artigos seja maior que 80%
-    # O artigo recebe o PID de AOP, observável pela
-    # propriedade `registered_aop_pid`
+
+    # Obtém `previous_pid` da base AOP (`article.registered_aop_pid`)
     update_article_with_aop_status(article)
+    previous_pid = article.registered_aop_pid
+    if previous_pid:
+        # anota para ser incluído no XML
+        pids_to_append_in_xml.append((previous_pid, "previous-pid"))
+
+    # v2
+    pid_v2 = article.get_scielo_pid("v2")
+    if pid_v2 is None:
+        pid_v2 = get_scielo_pid_v2(issn_id, year_and_order, article.order)
+        # anota para ser incluído no XML
+        pids_to_append_in_xml.append((pid_v2, "scielo-v2"))
+
+    # v3
+    pid_v3 = article.get_scielo_pid("v3")
 
     if pid_v2 and pid_v3:
         exists_in_database = pid_manager.pids_already_registered(pid_v2, pid_v3)
