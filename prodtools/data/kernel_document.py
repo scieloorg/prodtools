@@ -171,33 +171,14 @@ def _register_pids_in_pid_manager(pid_manager, article, issn_id, year_and_order)
     # v3
     pid_v3 = article.get_scielo_pid("v3")
 
-    if pid_v2 and pid_v3:
-        exists_in_database = pid_manager.pids_already_registered(pid_v2, pid_v3)
+    # manage
+    result = pid_manager.manage(
+        pid_v2, pid_v3, previous_pid, scielo_id_gen.generate_scielo_pid,
+    )
+    if result:
+        v2, v3, prev = result
+        article.registered_scielo_id = v3
+        pids_to_append_in_xml.append((v3, "scielo-v3"))
 
-        if not exists_in_database:
-            pid_manager.register(pid_v2, pid_v3)
-
-        return pids_to_append_in_xml
-
-    if pid_v2 is None:
-        pid_v2 = get_scielo_pid_v2(issn_id, year_and_order, article.order)
-        pids_to_append_in_xml.append((pid_v2, "scielo-v2"))
-
-    if pid_v3 is None:
-        pid_v3 = (
-            pid_manager.get_pid_v3(article.registered_aop_pid)
-            or pid_manager.get_pid_v3(pid_v2)
-            or scielo_id_gen.generate_scielo_pid()
-        )
-        article.registered_scielo_id = pid_v3
-        pids_to_append_in_xml.append((pid_v3, "scielo-v3"))
-
-    try:
-        pid_manager.register(pid_v2, pid_v3)
-    except sqlite3.OperationalError:
-        LOGGER.exception(
-            "Could not update sql database with pid v2 and v3."
-            " The following exception was captured."
-        )
     return pids_to_append_in_xml
 

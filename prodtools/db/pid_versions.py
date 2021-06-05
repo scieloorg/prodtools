@@ -66,6 +66,19 @@ class PIDVersionsManager:
         return self.session.query(PidVersion).filter_by(v2=v2, v3=v3).count() == 1
 
     def manage(self, v2, v3, prev, v3_gen):
+        """
+        Gerencia o registro dos pids v2, v3, prev no `pid_manager`.
+
+        Se no artigo XML há v3, vale todos os pids "presentes" no XML
+        (v2 e previous_pid se aplicável) e desconsidera o que estiver
+        registrado no `pid_manager`, pois esta abordagem permite a correção dos
+        dados.
+
+        Se no artigo não há v3, consulta os registros pelo `previous_pid`
+        ou `v2`.
+
+        Se detectar registros repetidos, apaga.
+        """
         self.session = self.Session()
         q = self.session.query(PidVersion)
         ret = (
@@ -84,9 +97,12 @@ class PIDVersionsManager:
 
     def _search_by_v3(self, q, v2, v3, prev):
         """
-        
+        Se no artigo XML há v3, vale todos os pids "presentes" no XML
+        (v2 e previous_pid se aplicável) e desconsidera o que estiver
+        registrado no `pid_manager`, pois esta abordagem permite a correção dos
+        dados.
         """
-        # obtém os registros em que há v3 igual a v3
+        # obtém os registros em que há `v3` igual a `v3`
         v3_records = [] or v3 and q.filter_by(v3=v3).all()
         if v3_records:
             for rec in v3_records:
@@ -95,18 +111,23 @@ class PIDVersionsManager:
             # registra os pares (v2, v3) e (prev, v3), se existir
             for pid_v2 in (v2, prev):
                 if pid_v2:
-                    # adicionar registros com o par v2, v3
+                    # adicionar registros com o par (pid_v2, v3)
                     self.session.add(PidVersion(v2=pid_v2, v3=v3))
             # finaliza
             return (v2, v3, prev)
 
     def _search_by_v2_and_prev(self, q, v2, prev, v3_gen):
-        # obtém os registros em que há v2 igual a prev
+        """
+        Se no artigo não há v3, consulta os registros pelo `previous_pid`
+        ou `v2`.
+        """
+        # obtém os registros em que `v2` é igual a `prev`
         prev_records = [] or prev and q.filter_by(v2=prev).all()
 
-        # obtém os registros em que há v2 igual a v2
+        # obtém os registros em que `v2` é igual a `v2`
         v2_records = [] or v2 and q.filter_by(v2=v2).all()
 
+        # obtém os `v3` encontrados no resultado da consulta
         v3_values = set([record.v3 for record in prev_records + v2_records])
 
         return (
@@ -119,21 +140,29 @@ class PIDVersionsManager:
         )
 
     def _search_by_v2_and_prev__no_record_found(
-            self, v2, prev, v3_values, v3_gen,
-            ):
+            self, v2, prev, v3_values, v3_gen):
+        """
+        Consulta os registros pelo `previous_pid` ou `v2`.
+        Mas nenhum registro foi encontrado.
+        """
         if not v3_values:
-            # nenhum registro encontrado
-            # registra os pares (v2, v3) e (prev, v3), se existir
+            # gera um v3
             v3 = v3_gen()
+            # registra os pares (v2, v3) e/ou (prev, v3)
             for pid_v2 in (v2, prev):
                 if pid_v2:
-                    # adicionar registros com o par v2, v3
+                    # adicionar registros com o par (pid_v2, v3)
                     self.session.add(PidVersion(v2=pid_v2, v3=v3))
             # finaliza
             return (v2, v3, prev)
 
     def _search_by_v2_and_prev__one_v3_found(
             self, v2, prev, v3_values, v2_records, prev_records):
+        """
+        Consulta os registros pelo `previous_pid` ou `v2`.
+        Todos os registros encontrados contém o mesmo valor para `v3`.
+        Possível encontrar de 1 a n registros.
+        """
         if len(v3_values) == 1:
             # pelo menos 1 registro encontrado, de prev ou de v2 ou de ambos
             if len(prev_records) == len(v2_records) == 1:
@@ -158,8 +187,12 @@ class PIDVersionsManager:
     def _search_by_first_of_prev_or_v2(
             self, q, v2, prev, v2_records, prev_records):
         """
+        Consulta os registros pelo `previous_pid` ou `v2`.
+        Mas os registros encontrados contém mais de um valor para `v3`.
+
         Obtém o primeiro registro,
-        considerando a sequencia de prioridade prev e v2
+        considerando a sequencia de prioridade `previous_pid` ou `v2`,
+        valem os dados do primeiro encontrado.
         """
         record = (
             prev and q.filter_by(v2=prev).first() or
