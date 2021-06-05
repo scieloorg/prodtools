@@ -40,7 +40,7 @@ def add_article_id_to_received_documents(
     """
 
     for xml_name, article in received_docs.items():
-        pids_to_append_in_xml = register_pids_in_pid_manager(
+        pids_to_append_in_xml = new_register_pids_in_pid_manager(
             pid_manager, article, issn_id, year_and_order)
         if pids_to_append_in_xml:
             file_path = file_paths.get(xml_name)
@@ -110,7 +110,7 @@ def update_article_xml_file_with_pids(file_path, pids_to_append_in_xml):
         write_etree_to_file(_tree, file_path)
 
 
-def register_pids_in_pid_manager(pid_manager, article, issn_id, year_and_order):
+def old_register_pids_in_pid_manager(pid_manager, article, issn_id, year_and_order):
     pid_v2 = article.get_scielo_pid("v2")
     pid_v3 = article.get_scielo_pid("v3")
     pids_to_append_in_xml = []
@@ -151,7 +151,7 @@ def register_pids_in_pid_manager(pid_manager, article, issn_id, year_and_order):
     return pids_to_append_in_xml
 
 
-def _register_pids_in_pid_manager(pid_manager, article, issn_id, year_and_order):
+def new_register_pids_in_pid_manager(pid_manager, article, issn_id, year_and_order):
     pids_to_append_in_xml = []
 
     # Obtém `previous_pid` da base AOP (`article.registered_aop_pid`)
