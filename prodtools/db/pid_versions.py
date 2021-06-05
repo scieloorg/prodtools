@@ -193,9 +193,17 @@ class PIDVersionsManager:
             v2 and q.filter_by(v2=v2).first()
         )
         if record:
+            v3 = record.v3
+
             self._remove_records(prev_records, record)
             self._remove_records(v2_records, record)
-            return (v2, record.v3, prev)
+
+            if record not in prev_records:
+                self._add_records([(prev, v3)])
+            if record not in v2_records:
+                self._add_records([(v2, v3)])
+
+            return (v2, v3, prev)
 
     def _add_records(self, v2_and_v3_items):
         """

@@ -61,8 +61,10 @@ class TestPIDVersionsManager(unittest.TestCase):
         )
 
     def test_search_by_first_of_prev_or_v2(self):
-        self.manager.session.add(PidVersion(v2='prev_pid', v3='prev_v3'))
         self.manager.session.add(PidVersion(v2='pid', v3='any_v3'))
+        self.manager.session.add(PidVersion(v2='pid', v3='any_v3_xxx'))
+        self.manager.session.add(PidVersion(v2='prev_pid', v3='prev_v3_zzz'))
+        self.manager.session.add(PidVersion(v2='prev_pid', v3='prev_v3_xxx'))
         self.manager.session.commit()
 
         q = self.manager.session.query(PidVersion)
@@ -74,7 +76,16 @@ class TestPIDVersionsManager(unittest.TestCase):
             v2_records=rec_v2,
             prev_records=rec_prev,
         )
-        self.assertEqual(('pid', 'prev_v3', 'prev_pid'), data)
+        result_prev = q.filter_by(v2='prev_pid').all()
+        result_v2 = q.filter_by(v2='pid').all()
+
+        self.assertEqual(('pid', 'prev_v3_xxx', 'prev_pid'), data)
+        self.assertEqual(1, len(result_prev))
+        self.assertEqual(1, len(result_v2))
+        self.assertEqual("prev_pid", result_prev[0].v2)
+        self.assertEqual("prev_v3_xxx", result_prev[0].v3)
+        self.assertEqual("pid", result_v2[0].v2)
+        self.assertEqual("prev_v3_xxx", result_v2[0].v3)
 
     def test_search_by_v2_and_prev__one_v3_found__in_one_prev_record(self):
         self.manager.session.add(PidVersion(v2='prev_pid', v3='same_v3'))
@@ -98,6 +109,8 @@ class TestPIDVersionsManager(unittest.TestCase):
             v2, prev, v3_values, v2_records, prev_records
         )
         self.assertEqual(('v2', 'same_v3', 'prev_pid'), data)
+        self.assertEqual(1, len(q.filter_by(v2=prev).all()))
+        self.assertEqual(1, len(q.filter_by(v2=v2).all()))
 
     def test_search_by_v2_and_prev__one_v3_found__in_one_v2_record(self):
         self.manager.session.add(PidVersion(v2='v2', v3='same_v3'))
@@ -121,6 +134,35 @@ class TestPIDVersionsManager(unittest.TestCase):
             v2, prev, v3_values, v2_records, prev_records
         )
         self.assertEqual(('v2', 'same_v3', 'prev_pid'), data)
+        self.assertEqual(1, len(q.filter_by(v2=prev).all()))
+        self.assertEqual(1, len(q.filter_by(v2=v2).all()))
+
+    def test_search_by_v2_and_prev__one_v3_found__in_several_records(self):
+        self.manager.session.add(PidVersion(v2='v2', v3='same_v3'))
+        self.manager.session.add(PidVersion(v2='prev_pid', v3='same_v3'))
+        self.manager.session.commit()
+
+        q = self.manager.session.query(PidVersion)
+
+        prev = 'prev_pid'
+        v2 = 'v2'
+
+        # obtém os registros em que `v2` é igual a `prev`
+        prev_records = [] or prev and q.filter_by(v2=prev).all()
+
+        # obtém os registros em que `v2` é igual a `v2`
+        v2_records = [] or v2 and q.filter_by(v2=v2).all()
+
+        # obtém os `v3` encontrados no resultado da consulta
+        v3_values = set([record.v3 for record in prev_records + v2_records])
+
+        data = self.manager._search_by_v2_and_prev__one_v3_found(
+            v2, prev, v3_values, v2_records, prev_records
+        )
+        self.assertEqual(('v2', 'same_v3', 'prev_pid'), data)
+        self.assertEqual(1, len(q.filter_by(v2=prev).all()))
+        self.assertEqual(1, len(q.filter_by(v2=v2).all()))
+
 
 
     # def test_pid_manager_should_use_aop_pid_to_search_pid_v3_from_database(self,):
