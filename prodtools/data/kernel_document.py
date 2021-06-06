@@ -124,9 +124,16 @@ def add_article_id_to_received_documents(
         pid_v2 = article.get_scielo_pid("v2")
         pid_v3 = article.get_scielo_pid("v3")
 
-        # Atualiza `article.registered_aop_pid` com previous pid registrado
-        # na base ahead do artigo
-        update_article_with_aop_status(article)
+        # Obtém previous do XML
+        prev_pid = article.previous_article_pid
+        if not prev_pid:
+            # Não há previous do XML
+            # Obtém previous_pid registrado na base ahead do artigo
+            update_article_with_aop_status(article)
+            # acessa previous_pid com `article.registered_aop_pid`
+            prev_pid = article.registered_aop_pid
+            if prev_pid:
+                pids_to_append_in_xml.append((prev_pid, "previous-pid"))
 
         if pid_v2 and pid_v3:
             exists_in_database = pid_manager.pids_already_registered(pid_v2, pid_v3)
