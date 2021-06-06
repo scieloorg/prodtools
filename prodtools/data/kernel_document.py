@@ -120,8 +120,15 @@ def add_article_id_to_received_documents(
     for xml_name, article in received_docs.items():
         pids_to_append_in_xml = []
 
-        # Obtém v2 e v3 do XML
+        # Obtém v2 do XML
         pid_v2 = article.get_scielo_pid("v2")
+        if pid_v2 is None:
+            # se v2 não está presente no XML, gerar a partir dos metadados
+            pid_v2 = get_scielo_pid_v2(issn_id, year_and_order, article.order)
+            # anotar para ser inserido no XML
+            pids_to_append_in_xml.append((pid_v2, "scielo-v2"))
+
+        # Obtém v3 do XML
         pid_v3 = article.get_scielo_pid("v3")
 
         # Obtém previous do XML
@@ -142,12 +149,6 @@ def add_article_id_to_received_documents(
                 pid_manager.register(pid_v2, pid_v3)
 
             continue
-
-        if pid_v2 is None:
-            # se v2 não está presente no XML, gerar a partir dos metadados
-            pid_v2 = get_scielo_pid_v2(issn_id, year_and_order, article.order)
-            # anotar para ser inserido no XML
-            pids_to_append_in_xml.append((pid_v2, "scielo-v2"))
 
         if pid_v3 is None:
             # se v3 não está no presente no XML, consulta no pid manager pelo
