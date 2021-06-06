@@ -163,14 +163,6 @@ def add_article_id_to_received_documents(
             if prev_pid:
                 pids_to_append_in_xml.append((prev_pid, "previous-pid"))
 
-        if pid_v3:
-            # se pid_v3 estiver no XML, deve prevalecer
-            register_pids(pid_manager, pid_v3, prev_pid, pid_v2)
-
-            # atualizar o XML com pids_to_append_in_xml
-            update_xml_file(file_path, pids_to_append_in_xml)
-            continue
-
         if pid_v3 is None:
             # se v3 não está no presente no XML, consulta no pid manager pelo
             # previous_pid ou pid_v2 ou gera pid v3
@@ -180,11 +172,13 @@ def add_article_id_to_received_documents(
                 scielo_id_gen.generate_scielo_pid()
             )
             article.registered_scielo_id = pid_v3
-
-            register_pids(pid_manager, pid_v3, prev_pid, pid_v2)
             # anotar para ser inserido no XML
             pids_to_append_in_xml.append((pid_v3, "scielo-v3"))
 
+        # registra no pid_manager os pares (v2,v3) não registrados
+        register_pids(pid_manager, pid_v3, prev_pid, pid_v2)
+
+        # atualizar o XML com pids_to_append_in_xml
         update_xml_file(file_path, pids_to_append_in_xml)
 
 
