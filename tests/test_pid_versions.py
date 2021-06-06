@@ -163,7 +163,20 @@ class TestPIDVersionsManager(unittest.TestCase):
         self.assertEqual(1, len(q.filter_by(v2=prev).all()))
         self.assertEqual(1, len(q.filter_by(v2=v2).all()))
 
+    def test__search_by_v2_and_prev__no_record_found(self):
+        def gen_v3():
+            return 'any_v3'
 
+        q = self.manager.session.query(PidVersion)
+        prev = 'prev_pid'
+        v2 = 'v2'
+
+        data = self.manager._search_by_v2_and_prev__no_record_found(
+            v2, prev, v3_values=None, v3_gen=gen_v3
+        )
+        self.assertEqual(('v2', 'any_v3', 'prev_pid'), data)
+        self.assertEqual(1, len(q.filter_by(v2=prev).all()))
+        self.assertEqual(1, len(q.filter_by(v2=v2).all()))
 
     # def test_pid_manager_should_use_aop_pid_to_search_pid_v3_from_database(self,):
     #     def _update_article_with_aop_pid(article: MockArticle):
