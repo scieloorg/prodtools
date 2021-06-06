@@ -14,7 +14,85 @@ from . import scielo_id_gen
 LOGGER = logging.getLogger(__name__)
 
 
-def add_article_id_to_received_documents(
+def old_add_article_id_to_received_documents(
+    pid_manager: PIDVersionsManager,
+    issn_id: str,
+    year_and_order: str,
+    received_docs: dict,
+    documents_in_isis: dict,
+    file_paths: dict,
+    update_article_with_aop_status: callable,
+) -> None:
+    """Atualiza article-id (scielo-v2 e scielo-v3) dos documentos recebidos.
+
+    Params:
+        pid_manager (PIDVersionsManager): instância de PIDVersionsManager para gerir pid da versão 3
+        issn_id (str): ISSN do periódico
+        year_and_order (str): Ano e ordem da issue processada
+        received_docs (dict): Pacote de documentos recebidos para processar
+        documents_in_isis (dict): Documentos já registrados na base isis (acron/volnum)
+        file_paths (dict): arquivos do received_docs
+        update_article_with_aop_status (callable): Função que recupera o AOP PID e modifica o
+            artigo com este dado
+
+    Returns:
+        None
+    """
+
+    for xml_name, article in received_docs.items():
+        pid_v2 = article.get_scielo_pid("v2")
+        pid_v3 = article.get_scielo_pid("v3")
+        pids_to_append_in_xml = []
+        # Compara o artigo com a base de artigos AOP
+        # Caso a semelhança entre os artigos seja maior que 80%
+        # O artigo recebe o PID de AOP, observável pela
+        # propriedade `registered_aop_pid`
+        update_article_with_aop_status(article)
+
+        if pid_v2 and pid_v3:
+            exists_in_database = pid_manager.pids_already_registered(pid_v2, pid_v3)
+
+            if not exists_in_database:
+                pid_manager.register(pid_v2, pid_v3)
+
+            continue
+
+        if pid_v2 is None:
+            pid_v2 = get_scielo_pid_v2(issn_id, year_and_order, article.order)
+            pids_to_append_in_xml.append((pid_v2, "scielo-v2"))
+
+        if pid_v3 is None:
+            pid_v3 = (
+                pid_manager.get_pid_v3(article.registered_aop_pid)
+                or pid_manager.get_pid_v3(pid_v2)
+                or scielo_id_gen.generate_scielo_pid()
+            )
+            article.registered_scielo_id = pid_v3
+            pids_to_append_in_xml.append((pid_v3, "scielo-v3"))
+
+        try:
+            pid_manager.register(pid_v2, pid_v3)
+        except sqlite3.OperationalError:
+            LOGGER.exception(
+                "Could not update sql database with pid v2 and v3."
+                " The following exception was captured."
+            )
+
+        file_path = file_paths.get(xml_name)
+        if file_path is None:
+            LOGGER.debug("Could not find XML path for '%s' xml.", xml_name)
+            return None
+
+        try:
+            tree = xml_utils.get_xml_object(file_path)
+        except xml_utils.etree.XMLSyntaxError:
+            LOGGER.info("%s is not a valid XML", file_path)
+        else:
+            _tree = add_article_id_to_etree(tree, pids_to_append_in_xml)
+            write_etree_to_file(_tree, file_path)
+
+
+def new_add_article_id_to_received_documents(
     pid_manager: PIDVersionsManager,
     issn_id: str,
     year_and_order: str,
