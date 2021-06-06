@@ -7,8 +7,8 @@ import os
 from io import StringIO
 
 from lxml import etree
-from copy import deepcopy
 from prodtools.data import kernel_document
+from prodtools.db.pid_versions import PIDVersionsManager
 
 
 class MockArticle:
@@ -31,6 +31,9 @@ class MockArticle:
 
 class TestKernelDocumentAddArticleIdToReceivedDocuments(unittest.TestCase):
     def setUp(self):
+        self.temporary_db = tempfile.mkstemp(suffix=".db")[-1]
+        self.manager = PIDVersionsManager("sqlite:///" + self.temporary_db)
+
         self.files = ["file" + str(i) + ".xml" for i in range(1, 6)]
         for f in self.files:
             with open(f, "wb") as fp:
@@ -62,7 +65,8 @@ class TestKernelDocumentAddArticleIdToReceivedDocuments(unittest.TestCase):
             return "pid-v3-registrado-anteriormente-para-documento-aop"
         return "brzWFrVFdpYMXdpvq7dDJBQ"
 
-    def test_add_article_id_to_received_documents(self):
+    @patch("prodtools.data.kernel_document.PIDVersionsManager")
+    def test_add_article_id_to_received_documents(self, MockPIDVersionsManager):
         registered = {
             "file1": MockArticle(None, None, "005012345"),
             "file2": MockArticle("xyzwx", None),
@@ -83,8 +87,9 @@ class TestKernelDocumentAddArticleIdToReceivedDocuments(unittest.TestCase):
         issn_id = "9876-3456"
         year_and_order = "20173"
 
-        mock_pid_manager = Mock()
-        mock_pid_manager.manage.side_effect = [
+        MockPIDVersionsManager.return_value = self.manager
+        self.manager.manage = Mock()
+        self.manager.manage.side_effect = [
             ('S9876-34562017000312345', "anyv3", "005012345"),
             ('S9876-34562017000312345', "xxxxxx", "005012340"),
             ('33333', "xxxxxx", None),
@@ -94,7 +99,7 @@ class TestKernelDocumentAddArticleIdToReceivedDocuments(unittest.TestCase):
         kernel_document.scielo_id_gen.generate_scielo_pid = Mock(
             return_value="xxxxxx")
         kernel_document.add_article_id_to_received_documents(
-            mock_pid_manager, issn_id, year_and_order, received,
+            'db', issn_id, year_and_order, received,
             registered, file_paths, lambda x:x
         )
 
@@ -106,7 +111,6 @@ class TestKernelDocumentAddArticleIdToReceivedDocuments(unittest.TestCase):
         ]
         for recv, expected in zip(received.items(), expected_items):
             name, item = recv
-            registered_doc = registered.get(name)
             with self.subTest(name):
                 self.assertEqual(item.registered_scielo_id, expected[1])
 
@@ -181,15 +185,18 @@ class TestKernelDocumentAddArticleIdToReceivedDocuments(unittest.TestCase):
                 f.read(),
             )
 
+    @patch("prodtools.data.kernel_document.PIDVersionsManager")
     @patch("prodtools.data.kernel_document.write_etree_to_file")
-    def test_should_call_the_write_etree_to_file_when_the_pid_list_isnt_empty(self, mk):
-        mock_pid_manager = Mock()
-        mock_pid_manager.manage.side_effect = [
-            ('S9876-34562017000312345', "pid-v3", None),
-        ]
+    def test_should_call_the_write_etree_to_file_when_the_pid_list_isnt_empty(
+            self, mk, MockPIDVersionsManager):
+
+        MockPIDVersionsManager.return_value = self.manager
+        self.manager.manage = Mock()
+        self.manager.manage.return_value = (
+            'S9876-34562017000312345', "pid-v3", None)
 
         kernel_document.add_article_id_to_received_documents(
-            pid_manager=mock_pid_manager,
+            pid_manager_info='db',
             issn_id="9876-3456",
             year_and_order="20173",
             received_docs={"file1": MockArticle("pid-v3", None)},
@@ -199,6 +206,29 @@ class TestKernelDocumentAddArticleIdToReceivedDocuments(unittest.TestCase):
         )
 
         self.assertTrue(mk.called)
+
+    @patch("prodtools.data.kernel_document.LOGGER")
+    @patch("prodtools.data.kernel_document.PIDVersionsManager")
+    def test_log_exception(
+            self, MockPIDVersionsManager, mock_logger):
+
+        MockPIDVersionsManager.side_effect = Exception('falhou')
+
+        data = kernel_document.new_register_pids_in_pid_manager(
+            pid_manager_info='db',
+            article=MockArticle("pid-v3", None),
+            issn_id="9876-3456",
+            year_and_order="20173",
+        )
+        mock_logger.info.assert_called_once_with(
+            'Unable to manage pids for '
+            '(S9876-34562017000312345, pid-v3, None): falhou'
+        )
+        self.assertEqual(
+            data,
+            {'previous-pid': None,
+             'scielo-v2': 'S9876-34562017000312345',
+             'scielo-v3': 'pid-v3'})
 
 
 class TestKernelDocument(unittest.TestCase):

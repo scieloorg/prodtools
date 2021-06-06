@@ -15,7 +15,7 @@ LOGGER = logging.getLogger(__name__)
 
 
 def add_article_id_to_received_documents(
-    pid_manager: PIDVersionsManager,
+    pid_manager_info: str,
     issn_id: str,
     year_and_order: str,
     received_docs: dict,
@@ -38,12 +38,14 @@ def add_article_id_to_received_documents(
     Returns:
         None
     """
+    if not pid_manager_info:
+        return
 
     for xml_name, article in received_docs.items():
         # Atribui `previous_pid` da base AOP (`article.registered_aop_pid`)
         update_article_with_aop_status(article)
         pids_to_append_in_xml = new_register_pids_in_pid_manager(
-            pid_manager, article, issn_id, year_and_order)
+            pid_manager_info, article, issn_id, year_and_order)
         update_article_xml_file_with_pids(
             file_paths.get(xml_name), pids_to_append_in_xml)
 
@@ -152,11 +154,11 @@ def old_register_pids_in_pid_manager(pid_manager, article, issn_id, year_and_ord
     return pids_to_append_in_xml
 
 
-def new_register_pids_in_pid_manager(pid_manager, article, issn_id, year_and_order):
+def new_register_pids_in_pid_manager(pid_manager_info, article, issn_id, year_and_order):
     pids_to_append_in_xml = {}
 
+    # previous
     previous_pid = article.registered_aop_pid
-
     # anota para ser incluído no XML
     pids_to_append_in_xml["previous-pid"] = previous_pid
 
@@ -164,21 +166,30 @@ def new_register_pids_in_pid_manager(pid_manager, article, issn_id, year_and_ord
     pid_v2 = article.get_scielo_pid("v2")
     if pid_v2 is None:
         pid_v2 = get_scielo_pid_v2(issn_id, year_and_order, article.order)
-        # anota para ser incluído no XML
+    # anota para ser incluído no XML
     pids_to_append_in_xml["scielo-v2"] = pid_v2
 
     # v3
     pid_v3 = article.get_scielo_pid("v3")
+    # anota para ser incluído no XML
     pids_to_append_in_xml["scielo-v3"] = pid_v3
-    
+
     # manage
-    result = pid_manager.manage(
-        pid_v2, pid_v3, previous_pid, scielo_id_gen.generate_scielo_pid,
-    )
-    if result:
-        v2, v3, prev = result
-        article.registered_scielo_id = v3
-        pids_to_append_in_xml["scielo-v3"] = v3
+    try:
+        with PIDVersionsManager(pid_manager_info) as pid_manager:
+            result = pid_manager.manage(
+                pid_v2, pid_v3, previous_pid,
+                scielo_id_gen.generate_scielo_pid,
+            )
+    except Exception as e:
+        LOGGER.info("Unable to manage pids for (%s, %s, %s): %s" %
+                    (pid_v2, pid_v3, previous_pid, str(e)))
+    else:
+        if result:
+            v2, v3, prev = result
+            article.registered_scielo_id = v3
+            # anota para ser incluído no XML
+            pids_to_append_in_xml["scielo-v3"] = v3
 
     return pids_to_append_in_xml
 

@@ -104,9 +104,9 @@ class PIDVersionsManager:
         # obtém os registros em que há `v3` igual a `v3`
         if not v3:
             return
-        v3_records = [] or v3 and q.filter_by(v3=v3).all()
-        v2_records = [] or v2 and q.filter_by(v2=v2).all()
-        prev_records = [] or prev and q.filter_by(v2=prev).all()
+        v3_records = v3 and q.filter_by(v3=v3).all() or []
+        v2_records = v2 and q.filter_by(v2=v2).all() or []
+        prev_records = prev and q.filter_by(v2=prev).all() or []
 
         self._remove_records(v3_records + v2_records + prev_records)
 
@@ -121,10 +121,10 @@ class PIDVersionsManager:
         ou `v2`.
         """
         # obtém os registros em que `v2` é igual a `prev`
-        prev_records = [] or prev and q.filter_by(v2=prev).all()
+        prev_records = prev and q.filter_by(v2=prev).all() or []
 
         # obtém os registros em que `v2` é igual a `v2`
-        v2_records = [] or v2 and q.filter_by(v2=v2).all()
+        v2_records = v2 and q.filter_by(v2=v2).all() or []
 
         # obtém os `v3` encontrados no resultado da consulta
         v3_values = set([record.v3 for record in prev_records + v2_records])

@@ -21,7 +21,6 @@ from prodtools.data import kernel_document
 from prodtools.db import xc_models
 from prodtools.db.serial import WebsiteFiles
 from prodtools.processing import pmc_pkgmaker
-from prodtools.db.pid_versions import PIDVersionsManager
 
 
 logger = logging.getLogger()
@@ -128,16 +127,19 @@ class ArticlesConversion(object):
 
         return scilista_items
 
-    def register_pids_and_update_xmls(self, pid_manager: PIDVersionsManager) -> None:
+    def register_pids_and_update_xmls(self, pid_manager_info: str) -> None:
         """Invoca o registro de PIDs em um banco de dados e logo após registra
         os PIDs nos documentos XMLs presentes no pacote."""
+        if not pid_manager_info:
+            return
+
         issue_models = self.registered_issue_data.issue_models
 
         if not issue_models:
             return
 
         kernel_document.add_article_id_to_received_documents(
-            pid_manager=pid_manager,
+            pid_manager_info=pid_manager_info,
             issn_id=issue_models.issue.issn_id,
             year_and_order=issue_models.record.get("36"),
             received_docs=self.pkg.articles,
@@ -434,9 +436,7 @@ class PkgProcessor(object):
 
         conversion = ArticlesConversion(registered_issue_data, pkg, pkg_eval_result, not self.config.interative_mode, self.config.local_web_app_path, self.config.web_app_site)
 
-        if self.config.pid_manager_info:
-            with PIDVersionsManager(self.config.pid_manager_info) as db:
-                conversion.register_pids_and_update_xmls(db)
+        conversion.register_pids_and_update_xmls(self.config.pid_manager_info)
 
         scilista_items = conversion.convert()
 
