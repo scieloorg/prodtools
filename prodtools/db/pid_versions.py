@@ -102,14 +102,18 @@ class PIDVersionsManager:
         dados.
         """
         # obtém os registros em que há `v3` igual a `v3`
+        if not v3:
+            return
         v3_records = [] or v3 and q.filter_by(v3=v3).all()
-        if v3_records:
-            # apaga os registros
-            self._remove_records(v3_records)
-            # registra os pares (v2, v3) e (prev, v3), se existir
-            self._add_records(((v2, v3), (prev, v3)))
-            # finaliza
-            return (v2, v3, prev)
+        v2_records = [] or v2 and q.filter_by(v2=v2).all()
+        prev_records = [] or prev and q.filter_by(v2=prev).all()
+
+        self._remove_records(v3_records + v2_records + prev_records)
+
+        # registra os pares (v2, v3) e (prev, v3), se existir
+        self._add_records(((v2, v3), (prev, v3)))
+        # finaliza
+        return (v2, v3, prev)
 
     def _search_by_v2_and_prev(self, q, v2, prev, v3_gen):
         """

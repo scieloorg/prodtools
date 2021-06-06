@@ -178,6 +178,38 @@ class TestPIDVersionsManager(unittest.TestCase):
         self.assertEqual(1, len(q.filter_by(v2=prev).all()))
         self.assertEqual(1, len(q.filter_by(v2=v2).all()))
 
+    def test_search_by_v3_no_record_found(self):
+        q = self.manager.session.query(PidVersion)
+        prev = 'prev_pid'
+        v2 = 'v2'
+        v3 = 'v3'
+        data = self.manager._search_by_v3(q, v2, v3, prev)
+        self.assertEqual(('v2', 'v3', 'prev_pid'), data)
+        self.assertEqual(1, len(q.filter_by(v2=prev).all()))
+        self.assertEqual(1, len(q.filter_by(v2=v2).all()))
+
+    def test_search_by_v3__found_records(self):
+        self.manager.session.add(PidVersion(v2='prev', v3='v3b'))
+        self.manager.session.add(PidVersion(v2='pid', v3='v3a'))
+        self.manager.session.add(PidVersion(v2='xxx', v3='same_v3'))
+        self.manager.session.add(PidVersion(v2='yyy', v3='same_v3'))
+        self.manager.session.commit()
+        q = self.manager.session.query(PidVersion)
+        prev = 'prev'
+        v2 = 'v2'
+        v3 = 'same_v3'
+        data = self.manager._search_by_v3(q, v2, v3, prev)
+
+        r_prev = q.filter_by(v2=prev).all()
+        r_v2 = q.filter_by(v2=v2).all()
+
+        self.assertEqual(('v2', 'same_v3', 'prev'), data)
+        self.assertEqual(1, len(r_prev))
+        self.assertEqual(1, len(r_v2))
+        self.assertEqual(('prev', 'same_v3'), (r_prev[0].v2, r_prev[0].v3))
+        self.assertEqual(('v2', 'same_v3'), (r_v2[0].v2, r_v2[0].v3))
+
+
     # def test_pid_manager_should_use_aop_pid_to_search_pid_v3_from_database(self,):
     #     def _update_article_with_aop_pid(article: MockArticle):
     #         article.registered_aop_pid = "AOPPID"
