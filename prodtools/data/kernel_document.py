@@ -175,9 +175,9 @@ def add_article_id_to_received_documents(
             # se v3 não está no presente no XML, consulta no pid manager pelo
             # previous_pid ou pid_v2 ou gera pid v3
             pid_v3 = (
-                pid_manager.get_pid_v3(prev_pid)
-                or pid_manager.get_pid_v3(pid_v2)
-                or scielo_id_gen.generate_scielo_pid()
+                pid_manager.get_pid_v3(prev_pid) or
+                pid_manager.get_pid_v3(pid_v2) or
+                scielo_id_gen.generate_scielo_pid()
             )
             article.registered_scielo_id = pid_v3
 
