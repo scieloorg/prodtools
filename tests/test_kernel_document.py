@@ -57,9 +57,9 @@ class TestKernelDocumentAddArticleIdToReceivedDocuments(unittest.TestCase):
             except IOError:
                 pass
 
-    def _return_scielo_pid_v3_if_aop_pid_match(self, pid):
+    def _return_scielo_pid_v3_if_aop_pid_match(self, prev_pid, pid):
         """Representa a busca pelo PID v3 a partir do PID v2"""
-        if pid == "AOPPID":
+        if prev_pid == "AOPPID":
             return "pid-v3-registrado-anteriormente-para-documento-aop"
         return "brzWFrVFdpYMXdpvq7dDJBQ"
 
@@ -84,7 +84,7 @@ class TestKernelDocumentAddArticleIdToReceivedDocuments(unittest.TestCase):
         year_and_order = "20173"
 
         mock_pid_manager = Mock()
-        mock_pid_manager.get_pid_v3.return_value = None
+        mock_pid_manager.get_most_recent_pid_v3.return_value = None
 
         kernel_document.scielo_id_gen.generate_scielo_pid = Mock(return_value="xxxxxx")
         kernel_document.add_article_id_to_received_documents(
@@ -113,7 +113,7 @@ class TestKernelDocumentAddArticleIdToReceivedDocuments(unittest.TestCase):
             article.registered_aop_pid = "AOPPID"
 
         mock_pid_manager = Mock()
-        mock_pid_manager.get_pid_v3 = self._return_scielo_pid_v3_if_aop_pid_match
+        mock_pid_manager.get_most_recent_pid_v3 = self._return_scielo_pid_v3_if_aop_pid_match
 
         kernel_document.add_article_id_to_received_documents(
             pid_manager=mock_pid_manager,
