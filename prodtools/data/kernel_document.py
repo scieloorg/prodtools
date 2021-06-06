@@ -142,12 +142,16 @@ def add_article_id_to_received_documents(
             if prev_pid:
                 pids_to_append_in_xml.append((prev_pid, "previous-pid"))
 
-        if pid_v2 and pid_v3:
-            exists_in_database = pid_manager.pids_already_registered(pid_v2, pid_v3)
-
-            if not exists_in_database:
-                pid_manager.register(pid_v2, pid_v3)
-
+        if pid_v3:
+            # se pid_v3 estiver no XML, deve prevalecer
+            for v2 in (prev_pid, pid_v2):
+                if not v2:
+                    continue
+                found_in_db = pid_manager.pids_already_registered(v2, pid_v3)
+                if not found_in_db:
+                    pid_manager.register(v2, pid_v3)
+            # atualizar o XML com pids_to_append_in_xml
+            
             continue
 
         if pid_v3 is None:
