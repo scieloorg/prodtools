@@ -55,6 +55,8 @@ class PIDVersionsManager:
             return True
 
     def get_pid_v3(self, v2):
+        if not v2:
+            return
         self.session = self.Session()
         pid_register = self.session.query(PidVersion).filter_by(v2=v2).first()
         if pid_register:
