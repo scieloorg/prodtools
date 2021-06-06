@@ -42,8 +42,9 @@ def add_article_id_to_received_documents(
         return
 
     for xml_name, article in received_docs.items():
-        # Atribui `previous_pid` da base AOP (`article.registered_aop_pid`)
+        # Atualiza o `article.registered_aop_pid` consultando a base AOP
         update_article_with_aop_status(article)
+
         pids_to_append_in_xml = new_register_pids_in_pid_manager(
             pid_manager_info, article, issn_id, year_and_order)
         update_article_xml_file_with_pids(
@@ -158,21 +159,24 @@ def new_register_pids_in_pid_manager(pid_manager_info, article, issn_id, year_an
     pids_to_append_in_xml = {}
 
     # previous
-    previous_pid = article.registered_aop_pid
-    # anota para ser incluído no XML
-    pids_to_append_in_xml["previous-pid"] = previous_pid
+    # article.previous_article_pid obtido do XML
+    previous_pid = article.previous_article_pid
+    if not previous_pid:
+        # article.registered_aop_pid é obtido da base do xc
+        previous_pid = article.registered_aop_pid
+        if previous_pid:
+            # anota para ser incluído no XML
+            pids_to_append_in_xml["previous-pid"] = previous_pid
 
     # v2
     pid_v2 = article.get_scielo_pid("v2")
     if pid_v2 is None:
         pid_v2 = get_scielo_pid_v2(issn_id, year_and_order, article.order)
-    # anota para ser incluído no XML
-    pids_to_append_in_xml["scielo-v2"] = pid_v2
+        # anota para ser incluído no XML
+        pids_to_append_in_xml["scielo-v2"] = pid_v2
 
     # v3
     pid_v3 = article.get_scielo_pid("v3")
-    # anota para ser incluído no XML
-    pids_to_append_in_xml["scielo-v3"] = pid_v3
 
     # manage
     try:

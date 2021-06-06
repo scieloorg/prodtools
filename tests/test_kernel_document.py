@@ -12,15 +12,16 @@ from prodtools.db.pid_versions import PIDVersionsManager
 
 
 class MockArticle:
-    def __init__(self, pid_v3, pid_v2, previous_pid=None):
+    def __init__(self, pid_v3, pid_v2, previous_pid, registered_previous_pid):
         # este atributo não existe no Article real
         self._scielo_pid = pid_v2
 
         # estes atributos existem no Article real
         self.scielo_id = pid_v3
         self.registered_scielo_id = None
-        self.registered_aop_pid = previous_pid
+        self.registered_aop_pid = registered_previous_pid
         self.order = "12345"
+        self.previous_article_pid = previous_pid
 
     def get_scielo_pid(self, name):
         # simula o get_scielo_pid real
@@ -68,17 +69,17 @@ class TestKernelDocumentAddArticleIdToReceivedDocuments(unittest.TestCase):
     @patch("prodtools.data.kernel_document.PIDVersionsManager")
     def test_add_article_id_to_received_documents(self, MockPIDVersionsManager):
         registered = {
-            "file1": MockArticle(None, None, "005012345"),
-            "file2": MockArticle("xyzwx", None),
-            "file3": MockArticle(None, "09873"),
-            "file4": MockArticle("Akouuad", "83847"),
+            "file1": MockArticle(None, None, None, "005012345"),
+            "file2": MockArticle("xyzwx", None, None, None),
+            "file3": MockArticle(None, "09873", None, None),
+            "file4": MockArticle("Akouuad", "83847", None, None),
         }
         received = {
             "file1": MockArticle(
-                "anyv3", 'S9876-34562017000312345', "005012345"),
-            "file2": MockArticle(None, None, "005012340"),
-            "file3": MockArticle(None, "33333"),
-            "file4": MockArticle("44444", None),
+                "anyv3", 'S9876-34562017000312345', None, "005012345"),
+            "file2": MockArticle(None, None, None, "005012340"),
+            "file3": MockArticle(None, "33333", None, None),
+            "file4": MockArticle("44444", None, None, None),
         }
         file_paths = {
             name: fname
@@ -103,25 +104,17 @@ class TestKernelDocumentAddArticleIdToReceivedDocuments(unittest.TestCase):
             registered, file_paths, lambda x:x
         )
 
-        expected_items = [
-            ('S9876-34562017000312345', "anyv3", "005012345"),
+        new_in_XML = [
+            ("005012345", ),
             ('S9876-34562017000312345', "xxxxxx", "005012340"),
-            ('33333', "xxxxxx", None),
-            ('S9876-34562017000312345', "44444", None),
+            ("xxxxxx", ),
+            ('S9876-34562017000312345', ),
         ]
-        for recv, expected in zip(received.items(), expected_items):
+        for recv, expected in zip(received.items(), new_in_XML):
             name, item = recv
             with self.subTest(name):
-                self.assertEqual(item.registered_scielo_id, expected[1])
-
                 with open(file_paths[name], "r") as fp:
                     content = fp.read()
-                    print(content)
-
-                q = len([e for e in expected if e])
-                print([e for e in expected if e])
-                self.assertEqual(content.count("<article-id "), q)
-
                 for i in expected:
                     if i:
                         self.assertIn(">{}<".format(i), content)
@@ -199,7 +192,7 @@ class TestKernelDocumentAddArticleIdToReceivedDocuments(unittest.TestCase):
             pid_manager_info='db',
             issn_id="9876-3456",
             year_and_order="20173",
-            received_docs={"file1": MockArticle("pid-v3", None)},
+            received_docs={"file1": MockArticle("pid-v3", None, None, None)},
             documents_in_isis={},
             file_paths={"file1": "file1.xml"},
             update_article_with_aop_status=lambda _: _,
@@ -216,7 +209,7 @@ class TestKernelDocumentAddArticleIdToReceivedDocuments(unittest.TestCase):
 
         data = kernel_document.new_register_pids_in_pid_manager(
             pid_manager_info='db',
-            article=MockArticle("pid-v3", None),
+            article=MockArticle("pid-v3", None, None, None),
             issn_id="9876-3456",
             year_and_order="20173",
         )
@@ -225,10 +218,9 @@ class TestKernelDocumentAddArticleIdToReceivedDocuments(unittest.TestCase):
             '(S9876-34562017000312345, pid-v3, None): falhou'
         )
         self.assertEqual(
+            {'scielo-v2': 'S9876-34562017000312345'},
             data,
-            {'previous-pid': None,
-             'scielo-v2': 'S9876-34562017000312345',
-             'scielo-v3': 'pid-v3'})
+        )
 
 
 class TestKernelDocument(unittest.TestCase):
