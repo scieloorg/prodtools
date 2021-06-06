@@ -92,6 +92,23 @@ def old_add_article_id_to_received_documents(
             write_etree_to_file(_tree, file_path)
 
 
+def update_xml_file(file_path, pids_to_append_in_xml):
+    if not pids_to_append_in_xml:
+        # nada para atualizar
+        return None
+    if not file_path:
+        LOGGER.debug("Could not find XML path")
+        return None
+    try:
+        tree = xml_utils.get_xml_object(file_path)
+    except xml_utils.etree.XMLSyntaxError:
+        LOGGER.info("%s is not a valid XML", file_path)
+    else:
+        # atualizar XML com os `pids_to_append_in_xml`
+        _tree = add_article_id_to_etree(tree, pids_to_append_in_xml)
+        write_etree_to_file(_tree, file_path)
+
+
 def add_article_id_to_received_documents(
     pid_manager: PIDVersionsManager,
     issn_id: str,
@@ -118,6 +135,10 @@ def add_article_id_to_received_documents(
     """
 
     for xml_name, article in received_docs.items():
+        file_path = file_paths.get(xml_name)
+        if not file_path:
+            LOGGER.debug("Could not find XML path for '%s' xml.", xml_name)
+
         pids_to_append_in_xml = []
 
         # Obtém v2 do XML
@@ -151,7 +172,7 @@ def add_article_id_to_received_documents(
                 if not found_in_db:
                     pid_manager.register(v2, pid_v3)
             # atualizar o XML com pids_to_append_in_xml
-            
+            update_xml_file(file_path, pids_to_append_in_xml)
             continue
 
         if pid_v3 is None:
@@ -174,19 +195,7 @@ def add_article_id_to_received_documents(
                 " The following exception was captured."
             )
 
-        file_path = file_paths.get(xml_name)
-        if file_path is None:
-            LOGGER.debug("Could not find XML path for '%s' xml.", xml_name)
-            return None
-
-        try:
-            tree = xml_utils.get_xml_object(file_path)
-        except xml_utils.etree.XMLSyntaxError:
-            LOGGER.info("%s is not a valid XML", file_path)
-        else:
-            # atualizar XML com os `pids_to_append_in_xml`
-            _tree = add_article_id_to_etree(tree, pids_to_append_in_xml)
-            write_etree_to_file(_tree, file_path)
+        update_xml_file(file_path, pids_to_append_in_xml)
 
 
 def get_scielo_pid_v2(issn_id, year_and_order, order_in_issue):
