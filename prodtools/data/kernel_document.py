@@ -165,12 +165,8 @@ def add_article_id_to_received_documents(
 
         if pid_v3:
             # se pid_v3 estiver no XML, deve prevalecer
-            for v2 in (prev_pid, pid_v2):
-                if not v2:
-                    continue
-                found_in_db = pid_manager.pids_already_registered(v2, pid_v3)
-                if not found_in_db:
-                    pid_manager.register(v2, pid_v3)
+            register_pids(pid_manager, pid_v3, prev_pid, pid_v2)
+
             # atualizar o XML com pids_to_append_in_xml
             update_xml_file(file_path, pids_to_append_in_xml)
             continue
@@ -184,18 +180,28 @@ def add_article_id_to_received_documents(
                 or scielo_id_gen.generate_scielo_pid()
             )
             article.registered_scielo_id = pid_v3
+
+            register_pids(pid_manager, pid_v3, prev_pid, pid_v2)
             # anotar para ser inserido no XML
             pids_to_append_in_xml.append((pid_v3, "scielo-v3"))
 
-        try:
-            pid_manager.register(pid_v2, pid_v3)
-        except sqlite3.OperationalError:
-            LOGGER.exception(
-                "Could not update sql database with pid v2 and v3."
-                " The following exception was captured."
-            )
-
         update_xml_file(file_path, pids_to_append_in_xml)
+
+
+def register_pids(pid_manager, pid_v3, prev_pid, pid_v2):
+    for v2 in (prev_pid, pid_v2):
+        if not v2:
+            continue
+        found_in_db = pid_manager.pids_already_registered(v2, pid_v3)
+        if not found_in_db:
+            try:
+                pid_manager.register(v2, pid_v3)
+            except Exception as e:
+                LOGGER.info(
+                    "Could not update sql database with (%s, %s)"
+                    " The following exception was captured. %s" %
+                    (v2, pid_v3, str(e))
+                )
 
 
 def get_scielo_pid_v2(issn_id, year_and_order, order_in_issue):
