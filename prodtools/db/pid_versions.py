@@ -55,10 +55,32 @@ class PIDVersionsManager:
             return True
 
     def get_pid_v3(self, v2):
+        if not v2:
+            return
         self.session = self.Session()
         pid_register = self.session.query(PidVersion).filter_by(v2=v2).first()
         if pid_register:
             return pid_register.v3
+
+    def get_records(self, v2):
+        if not v2:
+            return
+        self.session = self.Session()
+        return self.session.query(PidVersion).filter_by(v2=v2).all()
+
+    def get_most_recent_pid_v3(self, prev_pid, pid_v2):
+        prev_records = self.get_records(prev_pid) or []
+        v2_records = self.get_records(pid_v2) or []
+        v3_items = set([record.v3 for record in prev_records + v2_records])
+
+        if len(v3_items) == 1:
+            return v3_items.pop()
+        elif len(v3_items) > 1:
+            # encontrou v3 repetidos para o mesmo documento
+            # considerar o mais recente record.id é o maior
+            return sorted(
+                        [(record.id, record.v3)
+                         for record in prev_records + v2_records])[-1][1]
 
     def pids_already_registered(self, v2, v3):
         """Verifica se a chave composta (v2 e v3) existe no banco de dadoss"""

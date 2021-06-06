@@ -14,7 +14,7 @@ from . import scielo_id_gen
 LOGGER = logging.getLogger(__name__)
 
 
-def add_article_id_to_received_documents(
+def old_add_article_id_to_received_documents(
     pid_manager: PIDVersionsManager,
     issn_id: str,
     year_and_order: str,
@@ -90,6 +90,113 @@ def add_article_id_to_received_documents(
         else:
             _tree = add_article_id_to_etree(tree, pids_to_append_in_xml)
             write_etree_to_file(_tree, file_path)
+
+
+def update_xml_file(file_path, pids_to_append_in_xml):
+    if not pids_to_append_in_xml:
+        # nada para atualizar
+        return None
+    if not file_path:
+        LOGGER.debug("Could not find XML path")
+        return None
+    try:
+        tree = xml_utils.get_xml_object(file_path)
+    except xml_utils.etree.XMLSyntaxError:
+        LOGGER.info("%s is not a valid XML", file_path)
+    else:
+        # atualizar XML com os `pids_to_append_in_xml`
+        _tree = add_article_id_to_etree(tree, pids_to_append_in_xml)
+        write_etree_to_file(_tree, file_path)
+
+
+def add_article_id_to_received_documents(
+    pid_manager: PIDVersionsManager,
+    issn_id: str,
+    year_and_order: str,
+    received_docs: dict,
+    documents_in_isis: dict,
+    file_paths: dict,
+    update_article_with_aop_status: callable,
+) -> None:
+    """Atualiza article-id (scielo-v2 e scielo-v3) dos documentos recebidos.
+
+    Params:
+        pid_manager (PIDVersionsManager): instância de PIDVersionsManager para gerir pid da versão 3
+        issn_id (str): ISSN do periódico
+        year_and_order (str): Ano e ordem da issue processada
+        received_docs (dict): Pacote de documentos recebidos para processar
+        documents_in_isis (dict): Documentos já registrados na base isis (acron/volnum)
+        file_paths (dict): arquivos do received_docs
+        update_article_with_aop_status (callable): Função que recupera o AOP PID e modifica o
+            artigo com este dado
+
+    Returns:
+        None
+    """
+
+    for xml_name, article in received_docs.items():
+        file_path = file_paths.get(xml_name)
+        if not file_path:
+            LOGGER.debug("Could not find XML path for '%s' xml.", xml_name)
+
+        pids_to_append_in_xml = []
+
+        # Obtém v2 do XML
+        pid_v2 = article.get_scielo_pid("v2")
+        if pid_v2 is None:
+            # se v2 não está presente no XML, gerar a partir dos metadados
+            pid_v2 = get_scielo_pid_v2(issn_id, year_and_order, article.order)
+            # anotar para ser inserido no XML
+            pids_to_append_in_xml.append((pid_v2, "scielo-v2"))
+
+        # Obtém v3 do XML
+        pid_v3 = article.get_scielo_pid("v3")
+
+        # Obtém previous do XML
+        prev_pid = article.previous_article_pid
+        if not prev_pid:
+            # Não há previous do XML
+            # Obtém previous_pid registrado na base ahead do artigo
+            update_article_with_aop_status(article)
+            # acessa previous_pid com `article.registered_aop_pid`
+            prev_pid = article.registered_aop_pid
+            if prev_pid:
+                pids_to_append_in_xml.append((prev_pid, "previous-pid"))
+
+        if pid_v3 is None:
+            # se v3 não está no presente no XML, consulta no pid manager pelo
+            # previous_pid ou pid_v2 ou gera pid v3
+
+            pid_v3 = (
+                pid_manager.get_most_recent_pid_v3(prev_pid, pid_v2) or
+                scielo_id_gen.generate_scielo_pid()
+            )
+
+            article.registered_scielo_id = pid_v3
+            # anotar para ser inserido no XML
+            pids_to_append_in_xml.append((pid_v3, "scielo-v3"))
+
+        # registra no pid_manager os pares (v2,v3) não registrados
+        register_pids(pid_manager, pid_v3, prev_pid, pid_v2)
+
+        # atualizar o XML com pids_to_append_in_xml
+        update_xml_file(file_path, pids_to_append_in_xml)
+
+
+def register_pids(pid_manager, pid_v3, prev_pid, pid_v2):
+    for v2 in (prev_pid, pid_v2):
+        if not v2:
+            continue
+        found_in_db = pid_manager.pids_already_registered(v2, pid_v3)
+        if not found_in_db:
+            try:
+                pid_manager.register(v2, pid_v3)
+            except Exception as e:
+                LOGGER.info(
+                    "Could not update sql database with (%s, %s)"
+                    " The following exception was captured. %s" %
+                    (v2, pid_v3, str(e))
+                )
 
 
 def get_scielo_pid_v2(issn_id, year_and_order, order_in_issue):

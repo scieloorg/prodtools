@@ -12,14 +12,15 @@ from prodtools.data import kernel_document
 
 
 class MockArticle:
-    def __init__(self, pid_v3, pid_v2):
+    def __init__(self, pid_v3, pid_v2, db_prev_pid=None, prev_pid=None):
         # este atributo não existe no Article real
         self._scielo_pid = pid_v2
 
         # estes atributos existem no Article real
         self.scielo_id = pid_v3
         self.registered_scielo_id = None
-        self.registered_aop_pid = None
+        self.registered_aop_pid = db_prev_pid
+        self.previous_article_pid = prev_pid
         self.order = "12345"
 
     def get_scielo_pid(self, name):
@@ -56,9 +57,9 @@ class TestKernelDocumentAddArticleIdToReceivedDocuments(unittest.TestCase):
             except IOError:
                 pass
 
-    def _return_scielo_pid_v3_if_aop_pid_match(self, pid):
+    def _return_scielo_pid_v3_if_aop_pid_match(self, prev_pid, pid):
         """Representa a busca pelo PID v3 a partir do PID v2"""
-        if pid == "AOPPID":
+        if prev_pid == "AOPPID":
             return "pid-v3-registrado-anteriormente-para-documento-aop"
         return "brzWFrVFdpYMXdpvq7dDJBQ"
 
@@ -83,7 +84,7 @@ class TestKernelDocumentAddArticleIdToReceivedDocuments(unittest.TestCase):
         year_and_order = "20173"
 
         mock_pid_manager = Mock()
-        mock_pid_manager.get_pid_v3.return_value = None
+        mock_pid_manager.get_most_recent_pid_v3.return_value = None
 
         kernel_document.scielo_id_gen.generate_scielo_pid = Mock(return_value="xxxxxx")
         kernel_document.add_article_id_to_received_documents(
@@ -112,7 +113,7 @@ class TestKernelDocumentAddArticleIdToReceivedDocuments(unittest.TestCase):
             article.registered_aop_pid = "AOPPID"
 
         mock_pid_manager = Mock()
-        mock_pid_manager.get_pid_v3 = self._return_scielo_pid_v3_if_aop_pid_match
+        mock_pid_manager.get_most_recent_pid_v3 = self._return_scielo_pid_v3_if_aop_pid_match
 
         kernel_document.add_article_id_to_received_documents(
             pid_manager=mock_pid_manager,
@@ -124,7 +125,7 @@ class TestKernelDocumentAddArticleIdToReceivedDocuments(unittest.TestCase):
             update_article_with_aop_status=_update_article_with_aop_pid,
         )
 
-        mock_pid_manager.register.assert_called_with(
+        mock_pid_manager.pids_already_registered.assert_called_with(
             "S9876-34562017000312345",
             "pid-v3-registrado-anteriormente-para-documento-aop",
         )
@@ -145,7 +146,7 @@ class TestKernelDocumentAddArticleIdToReceivedDocuments(unittest.TestCase):
             update_article_with_aop_status=lambda _: _,
         )
 
-        self.assertTrue(mock_pid_manager.register.called)
+        self.assertTrue(mock_pid_manager.pids_already_registered.called)
 
     def test_add_pids_to_etree_should_return_none_if_etree_is_not_valid(self):
         self.assertIsNone(kernel_document.add_article_id_to_etree(None, []))
