@@ -198,7 +198,9 @@ class BrokenRef(object):
         mixed_citation = self.tree.find(".//mixed-citation")
         if mixed_citation is None:
             return
-        links = self.tree.findall(".//element-citation//ext-link")
+        links = [e
+                 for e in self.tree.findall(".//element-citation//ext-link")
+                 if e.text]
         if not links:
             return
         mixed_citation_text = xml_utils.tostring(mixed_citation)
