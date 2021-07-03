@@ -143,7 +143,7 @@ class ArticlesConversion(object):
             received_docs=self.pkg.articles,
             documents_in_isis=self.registered_issue_data.registered_articles,
             file_paths=self.pkg.file_paths,
-            update_article_with_aop_status=self.db.get_valid_aop,
+            update_article_with_aop_status=self.db and self.db.get_valid_aop,
         )
         logger.debug("Articles that compose this package were updated with SciELO Pids (v2, and v3)")
 

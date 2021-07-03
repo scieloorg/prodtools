@@ -47,7 +47,8 @@ def old_add_article_id_to_received_documents(
         # Caso a semelhança entre os artigos seja maior que 80%
         # O artigo recebe o PID de AOP, observável pela
         # propriedade `registered_aop_pid`
-        update_article_with_aop_status(article)
+        if update_article_with_aop_status:
+            update_article_with_aop_status(article)
 
         if pid_v2 and pid_v3:
             exists_in_database = pid_manager.pids_already_registered(pid_v2, pid_v3)
@@ -157,7 +158,8 @@ def add_article_id_to_received_documents(
         if not prev_pid:
             # Não há previous do XML
             # Obtém previous_pid registrado na base ahead do artigo
-            update_article_with_aop_status(article)
+            if update_article_with_aop_status:
+                update_article_with_aop_status(article)
             # acessa previous_pid com `article.registered_aop_pid`
             prev_pid = article.registered_aop_pid
             if prev_pid:
