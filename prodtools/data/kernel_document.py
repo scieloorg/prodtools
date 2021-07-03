@@ -10,6 +10,8 @@ from prodtools.utils import fs_utils
 from prodtools.utils import xml_utils
 from prodtools.db.pid_versions import PIDVersionsManager
 from . import scielo_id_gen
+from time import sleep
+
 
 LOGGER = logging.getLogger(__name__)
 
@@ -169,10 +171,15 @@ def add_article_id_to_received_documents(
             # se v3 não está no presente no XML, consulta no pid manager pelo
             # previous_pid ou pid_v2 ou gera pid v3
 
-            pid_v3 = (
-                pid_manager.get_most_recent_pid_v3(prev_pid, pid_v2) or
-                scielo_id_gen.generate_scielo_pid()
-            )
+            for i in range(3):
+                try:
+                    pid_v3 = pid_manager.get_most_recent_pid_v3(prev_pid, pid_v2)
+                except:
+                    # tenta novamente
+                    sleep(i**i*60*60)
+                else:
+                    pid_v3 = pid_v3 or scielo_id_gen.generate_scielo_pid()
+                    break
 
             article.registered_scielo_id = pid_v3
             # anotar para ser inserido no XML
@@ -189,16 +196,12 @@ def register_pids(pid_manager, pid_v3, prev_pid, pid_v2):
     for v2 in (prev_pid, pid_v2):
         if not v2:
             continue
-        found_in_db = pid_manager.pids_already_registered(v2, pid_v3)
-        if not found_in_db:
-            try:
-                pid_manager.register(v2, pid_v3)
-            except Exception as e:
-                LOGGER.info(
-                    "Could not update sql database with (%s, %s)"
-                    " The following exception was captured. %s" %
-                    (v2, pid_v3, str(e))
-                )
+
+        if not pid_manager.register(v2, pid_v3):
+            LOGGER.info(
+                "Could not update sql database with (%s, %s)"
+                (v2, pid_v3)
+            )
 
 
 def get_scielo_pid_v2(issn_id, year_and_order, order_in_issue):

@@ -4,6 +4,7 @@ import logging
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy import Column, Integer, String, UniqueConstraint, create_engine
 from sqlalchemy.orm import sessionmaker
+from sqlalchemy.exc import IntegrityError
 
 
 Base = declarative_base()
@@ -44,12 +45,16 @@ class PIDVersionsManager:
 
     def register(self, v2, v3):
         self.session = self.Session()
-        self.session.add(PidVersion(v2=v2, v3=v3))
         try:
+            self.session.add(PidVersion(v2=v2, v3=v3))
             self.session.commit()
-        except:
+        except IntegrityError:
             logging.debug("this item already exists in database")
+            return True
+        except Exception as e:
             self.session.rollback()
+            logging.exception(
+                "Error registering pids (%s, %s): %s" % (v2, v3, str(e)))
             return False
         else:
             return True
