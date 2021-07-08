@@ -14,6 +14,10 @@ from prodtools.utils import xml_utils
 LOGGER = logging.getLogger(__name__)
 
 
+class PidManagerExceedsIntentTimesError(Exception):
+    ...
+
+
 def update_xml_file(file_path, pids_to_append_in_xml):
     if not pids_to_append_in_xml:
         # nada para atualizar
@@ -32,6 +36,52 @@ def update_xml_file(file_path, pids_to_append_in_xml):
 
 
 def add_article_id_to_received_documents(
+    pid_manager_info: dict,
+    issn_id: str,
+    year_and_order: str,
+    received_docs: dict,
+    documents_in_isis: dict,
+    file_paths: dict,
+    update_article_with_aop_status: callable,
+) -> None:
+
+    exceptions = []
+    registered_v3_items = {}
+    total = len(received_docs)
+    times = 0
+    MAX_TRIES = total
+    while True:
+        try:
+            pid_manager = Manager(
+                pid_manager_info['name'], pid_manager_info['timeout'])
+            _add_article_id_to_received_documents(
+                pid_manager,
+                issn_id,
+                year_and_order,
+                received_docs,
+                documents_in_isis,
+                file_paths,
+                update_article_with_aop_status,
+                registered_v3_items,
+                results,
+            )
+        except Exception as e:
+            exceptions.append(e)
+        finally:
+            done = len([v for v in registered_v3_items.values() if v])
+            if done == total:
+                break
+            times += 1
+            if times > MAX_TRIES:
+                raise PidManagerExceedsIntentTimesError(
+                    "Pid Manager failed to set v3 to %i documents. "
+                    "Tried %i times. "
+                    "Done for %i documents. %s %s" %
+                    (total, times, done, results, "\n".join(exceptions))
+                )
+
+
+def _add_article_id_to_received_documents(
     pid_manager: Manager,
     issn_id: str,
     year_and_order: str,
@@ -39,6 +89,8 @@ def add_article_id_to_received_documents(
     documents_in_isis: dict,
     file_paths: dict,
     update_article_with_aop_status: callable,
+    registered_v3_items: dict,
+    results: dict,
 ) -> None:
     """Atualiza article-id (scielo-v2 e scielo-v3) dos documentos recebidos.
 
@@ -55,8 +107,9 @@ def add_article_id_to_received_documents(
     Returns:
         None
     """
-
     for xml_name, article in received_docs.items():
+        if registered_v3_items.get(xml_name):
+            continue
         file_path = file_paths.get(xml_name)
         if not file_path:
             LOGGER.debug("Could not find XML path for '%s' xml.", xml_name)
@@ -93,8 +146,11 @@ def add_article_id_to_received_documents(
             doi=article.doi,
             status="",
             generate_v3=generates)
+        results[xml_name] = result
 
         v3 = result.get("saved", {}).get("v3")
+        if v3:
+            registered_v3_items[xml_name] = v3
 
         if pid_v3 is None:
             # se v3 não está no presente no XML
