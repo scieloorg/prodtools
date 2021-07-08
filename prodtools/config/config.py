@@ -105,6 +105,20 @@ class Configuration(object):
             os.path.join(self.serial_path, "pid_manager.db"))
 
     @property
+    def pid_manager_timeout(self):
+        return self._data.get(
+            'PID_MANAGER_TIMEOUT',
+            20000) or 20000
+
+    @property
+    def pid_manager_logfile(self):
+        return os.path.join(self.serial_path, "pid_manager.log")
+
+    @property
+    def pid_manager_block_old(self):
+        return self._data.get('PID_MANAGER_BLOCK_OLD') == 'BLOCK_OLD'
+
+    @property
     def issue_db(self):
         return self._data.get('SOURCE_ISSUE_DB', self._data.get('Issue Database'))
 

@@ -19,9 +19,12 @@ INSTALL_REQUIRES = [
     'Pillow~=6.2.2',
     'psycopg2-binary~=2.8',
     'SQLAlchemy~=1.3',
-    'scielo_v3_manager>=0.5',
+    'scielo_v3_manager==0.5',
 ]
 
+dependency_links = [
+    'https://github.com/scieloorg/scielo_v3_manager/@0.5#egg=scielo_v3_manager'
+]
 
 EXTRAS_REQUIRE = {
 }
