@@ -947,8 +947,7 @@ class ArticleXML(object):
 
         for response in self.responses:
             doc_and_contribs.append(
-                (response.attrib.get('response-type'),
-                    response.findall('.//contrib')))
+                (response, response.findall('.//contrib')))
 
         return doc_and_contribs
 

@@ -1514,7 +1514,7 @@ class IssueAndTitleManager(object):
         j_record = self.find_journal_record(journal_title, p_issn, e_issn)
         if j_record is None:
             registered_title = None
-            msg = _('Unable to get journal data') + ' ' + journal_title
+            msg = _('Unable to get journal data') + ' ' + str((journal_title, p_issn, e_issn))
         else:
             registered_title = RegisteredTitle(j_record)
             msg = None

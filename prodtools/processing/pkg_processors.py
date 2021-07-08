@@ -18,6 +18,7 @@ from prodtools.validations.pkg_evaluation import (
 )
 from prodtools.data.package import PackageHasNoXMLFilesError
 from prodtools.data import kernel_document
+from prodtools.data import spf_document
 from prodtools.db import xc_models
 from prodtools.db.serial import WebsiteFiles
 from prodtools.processing import pmc_pkgmaker
@@ -143,7 +144,26 @@ class ArticlesConversion(object):
             received_docs=self.pkg.articles,
             documents_in_isis=self.registered_issue_data.registered_articles,
             file_paths=self.pkg.file_paths,
-            update_article_with_aop_status=self.db.get_valid_aop,
+            update_article_with_aop_status=self.db and self.db.get_valid_aop,
+        )
+        logger.debug("Articles that compose this package were updated with SciELO Pids (v2, and v3)")
+
+    def new_register_pids_and_update_xmls(self, pid_manager_info, timeout=20000) -> None:
+        """Invoca o registro de PIDs em um banco de dados e logo após registra
+        os PIDs nos documentos XMLs presentes no pacote."""
+        issue_models = self.registered_issue_data.issue_models
+
+        if not issue_models:
+            return
+
+        spf_document.add_article_id_to_received_documents(
+            pid_manager_info={"name": pid_manager_info, "timeout": timeout},
+            issn_id=issue_models.issue.issn_id,
+            year_and_order=issue_models.record.get("36"),
+            received_docs=self.pkg.articles,
+            documents_in_isis=self.registered_issue_data.registered_articles,
+            file_paths=self.pkg.file_paths,
+            update_article_with_aop_status=self.db and self.db.get_valid_aop,
         )
         logger.debug("Articles that compose this package were updated with SciELO Pids (v2, and v3)")
 
@@ -435,8 +455,26 @@ class PkgProcessor(object):
         conversion = ArticlesConversion(registered_issue_data, pkg, pkg_eval_result, not self.config.interative_mode, self.config.local_web_app_path, self.config.web_app_site)
 
         if self.config.pid_manager_info:
-            with PIDVersionsManager(self.config.pid_manager_info) as db:
-                conversion.register_pids_and_update_xmls(db)
+            try:
+                conversion.new_register_pids_and_update_xmls(
+                    self.config.pid_manager_info,
+                    self.config.pid_manager_timeout
+                )
+                pids_registered = True
+            except spf_document.PidManagerExceedsIntentTimesError as e:
+                pids_registered = False
+                try:
+                    with open(self.config.pid_manager_logfile, "a") as lfp:
+                        lfp.write("%s\n" % str(e))
+                except:
+                    logger.error(
+                        "Unable to register PidManagerExceedsIntentTimesError")
+            except:
+                pids_registered = False
+
+            if not pids_registered and not self.config.pid_manager_block_old:
+                with PIDVersionsManager(self.config.pid_manager_info) as db:
+                    conversion.register_pids_and_update_xmls(db)
 
         scilista_items = conversion.convert()
 

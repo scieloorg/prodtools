@@ -350,15 +350,10 @@ class WebsiteFiles(object):
             if xml_tree.docinfo:
                 url = xml_tree.docinfo.system_url
                 dtd_file_name = os.path.basename(url)
-                xml_tree.docinfo.system_url = dtd_file_name
-                xml_content = encoding.decode(
-                    xml_utils.etree.tostring(
-                        xml_tree,
-                        pretty_print=False,
-                        doctype=xml_tree.docinfo.doctype,
-                    )
-                )
-                return xml_content
+                if url and dtd_file_name and url != dtd_file_name:
+                    with open(xml_file_path, "r") as fp:
+                        xml_content = fp.read().replace(url, dtd_file_name)
+                    return xml_content
 
     def identify_ex_aop_pdf_files_to_update(self, aop_pdf_replacements):
         """
