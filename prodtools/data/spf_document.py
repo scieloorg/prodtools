@@ -66,7 +66,7 @@ def add_article_id_to_received_documents(
                 results,
             )
         except Exception as e:
-            exceptions.append(e)
+            exceptions.append(str(e))
         finally:
             done = len([v for v in registered_v3_items.values() if v])
             if done == total:
