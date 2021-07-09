@@ -455,31 +455,35 @@ class PkgProcessor(object):
         conversion = ArticlesConversion(registered_issue_data, pkg, pkg_eval_result, not self.config.interative_mode, self.config.local_web_app_path, self.config.web_app_site)
 
         if self.config.pid_manager_info:
-            _track = 1
-            try:
-                conversion.new_register_pids_and_update_xmls(
-                    self.config.pid_manager_info,
-                    self.config.pid_manager_timeout
-                )
-                _track = 2
-                pids_registered = True
-            except spf_document.PidManagerExceedsIntentTimesError as e:
-                pids_registered = False
-                _track = 3
-            except Exception as e:
-                pids_registered = False
-                _track = 4
+            conversion.new_register_pids_and_update_xmls(
+                self.config.pid_manager_info,
+                self.config.pid_manager_timeout
+            )
+            # _track = 1
+            # try:
+            #     conversion.new_register_pids_and_update_xmls(
+            #         self.config.pid_manager_info,
+            #         self.config.pid_manager_timeout
+            #     )
+            #     _track = 2
+            #     pids_registered = True
+            # except spf_document.PidManagerExceedsIntentTimesError as e:
+            #     pids_registered = False
+            #     _track = 3
+            # except Exception as e:
+            #     pids_registered = False
+            #     _track = 4
 
-            if not pids_registered:
-                try:
-                    with open(self.config.pid_manager_logfile, "a") as lfp:
-                        lfp.write("%i | %s\n" % (_track, str(e)))
-                except:
-                    logger.error(
-                        "Unable to register PidManagerExceedsIntentTimesError")
-                if not self.config.pid_manager_block_old:
-                    with PIDVersionsManager(self.config.pid_manager_info) as db:
-                        conversion.register_pids_and_update_xmls(db)
+            # if not pids_registered:
+            #     try:
+            #         with open(self.config.pid_manager_logfile, "a") as lfp:
+            #             lfp.write("%i | %s\n" % (_track, str(e)))
+            #     except:
+            #         logger.error(
+            #             "Unable to register PidManagerExceedsIntentTimesError")
+            #     if not self.config.pid_manager_block_old:
+            #         with PIDVersionsManager(self.config.pid_manager_info) as db:
+            #             conversion.register_pids_and_update_xmls(db)
 
         scilista_items = conversion.convert()
 
