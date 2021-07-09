@@ -10,7 +10,6 @@ from scielo_v3_manager.v3_gen import generates
 from prodtools.utils import fs_utils
 from prodtools.utils import xml_utils
 
-
 LOGGER = logging.getLogger(__name__)
 
 
@@ -72,7 +71,7 @@ def add_article_id_to_received_documents(
             if done == total:
                 break
             times += 1
-            if times > MAX_TRIES:
+            if times > MAX_TRIES or len(exceptions) > 0:
                 raise PidManagerExceedsIntentTimesError(
                     "Pid Manager failed to set v3 to %i documents. "
                     "Tried %i times. "

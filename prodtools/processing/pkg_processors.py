@@ -463,16 +463,16 @@ class PkgProcessor(object):
                 pids_registered = True
             except spf_document.PidManagerExceedsIntentTimesError as e:
                 pids_registered = False
+            except:
+                pids_registered = False
+
+            if not pids_registered and not self.config.pid_manager_block_old:
                 try:
                     with open(self.config.pid_manager_logfile, "a") as lfp:
                         lfp.write("%s\n" % str(e))
                 except:
                     logger.error(
                         "Unable to register PidManagerExceedsIntentTimesError")
-            except:
-                pids_registered = False
-
-            if not pids_registered and not self.config.pid_manager_block_old:
                 with PIDVersionsManager(self.config.pid_manager_info) as db:
                     conversion.register_pids_and_update_xmls(db)
 

@@ -199,7 +199,7 @@ def register_pids(pid_manager, pid_v3, prev_pid, pid_v2):
 
         if not pid_manager.register(v2, pid_v3):
             LOGGER.info(
-                "Could not update sql database with (%s, %s)"
+                "Could not update sql database with (%s, %s)" %
                 (v2, pid_v3)
             )
 
