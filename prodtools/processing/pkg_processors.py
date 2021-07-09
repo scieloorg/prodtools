@@ -466,7 +466,7 @@ class PkgProcessor(object):
             except spf_document.PidManagerExceedsIntentTimesError as e:
                 pids_registered = False
                 _track = 3
-            except Except as e:
+            except Exception as e:
                 pids_registered = False
                 _track = 4
 

@@ -49,6 +49,7 @@ def add_article_id_to_received_documents(
     total = len(received_docs)
     times = 0
     MAX_TRIES = total
+    results = {}
     while True:
         try:
             pid_manager = Manager(
