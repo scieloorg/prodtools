@@ -149,7 +149,8 @@ def _add_article_id_to_received_documents(
             generate_v3=generates)
         results[xml_name] = result
 
-        v3 = result.get("saved", {}).get("v3")
+        record = result.get("saved") or result.get("registered") or {}
+        v3 = record.get("v3")
         if v3:
             registered_v3_items[xml_name] = v3
 
@@ -158,6 +159,16 @@ def _add_article_id_to_received_documents(
             article.registered_scielo_id = v3
             # anotar para ser inserido no XML
             pids_to_append_in_xml.append((v3, "scielo-v3"))
+
+        # atualiza aop pid, se aplicável
+        if record and not prev_pid:
+            recovered_aop_pid = record.get("aop")
+            if not recovered_aop_pid:
+                if record.get("v2") and pid_v2 and pid_v2 != record.get("v2"):
+                    recovered_aop_pid = record.get("v2")
+            if recovered_aop_pid:
+                pids_to_append_in_xml.append(
+                    (recovered_aop_pid, "previous-pid"))
 
         # atualizar o XML com pids_to_append_in_xml
         update_xml_file(file_path, pids_to_append_in_xml)
