@@ -201,6 +201,20 @@ def _get_previous_pid_v2(pids_to_append_in_xml, article, update_article_with_aop
     return prev_pid
 
 
+def _get_pid_v3(pids_to_append_in_xml, article, pid_manager_v3):
+    # Obtém v3 do XML
+    pid_v3 = article.get_scielo_pid("v3")
+
+    if pid_manager_v3:
+        # se v3 não está no presente no XML
+        article.registered_scielo_id = pid_manager_v3
+        pid_v3 = pid_manager_v3
+        # anotar para ser inserido no XML
+        pids_to_append_in_xml.append((pid_manager_v3, "scielo-v3"))
+
+    return pid_v3
+
+
 def build_scielo_pid_v2(issn_id, year_and_order, order_in_issue):
     year = year_and_order[:4]
     order_in_year = year_and_order[4:].zfill(4)

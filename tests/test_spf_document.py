@@ -231,3 +231,57 @@ class TestSPFDocumentGetPreviousPidV2(unittest.TestCase):
 
         self.assertIsNone(result)
         self.assertEqual([("xxx", "scielo-v2")], pids_to_append_in_xml)
+
+
+class TestSPFDocumentGetV3(unittest.TestCase):
+    """docstring for TestSPFDocument"""
+
+    def test__get_pid_v3__returns_pid_in_xml(self):
+        pids_to_append_in_xml = [("xxx", "scielo-v2")]
+
+        pid_manager_v3 = {}
+        in_xml = "S3456-09872009000554321"
+        mock_article = MockArticle(pid_v3=in_xml)
+
+        result = spf_document._get_pid_v3(
+            pids_to_append_in_xml,
+            mock_article,
+            pid_manager_v3,
+        )
+        # retorna o mesmo valor que está no XML
+        self.assertEqual(in_xml, result)
+        # nao atualiza pids_to_append_in_xml
+        self.assertEqual([("xxx", "scielo-v2")], pids_to_append_in_xml)
+
+    def test__get_pid_v3__returns_got_from_pid_manager(self):
+        pids_to_append_in_xml = [("xxx", "scielo-v2")]
+        mock_article = MockArticle()
+        pid_manager_v3 = "v3provided_by_pid_manager"
+
+        result = spf_document._get_pid_v3(
+            pids_to_append_in_xml,
+            mock_article,
+            pid_manager_v3,
+        )
+
+        self.assertEqual("v3provided_by_pid_manager", result)
+        self.assertEqual(
+            [("xxx", "scielo-v2"),
+             ("v3provided_by_pid_manager", "scielo-v3")],
+            pids_to_append_in_xml
+        )
+
+    def test__get_pid_v3__returns_got_new_pid_v3_from_pid_manager(self):
+        pids_to_append_in_xml = [("xxx", "scielo-v2")]
+
+        mock_article = MockArticle(pid_v3="v3_no_xml")
+        pid_manager_v3 = "new_v3_provided_by_pid_manager"
+        result = spf_document._get_pid_v3(
+            pids_to_append_in_xml,
+            mock_article,
+            pid_manager_v3,
+        )
+
+        self.assertEqual("new_v3_provided_by_pid_manager", result)
+        self.assertEqual([("xxx", "scielo-v2"), ("new_v3_provided_by_pid_manager", "scielo-v3")],
+                         pids_to_append_in_xml)
