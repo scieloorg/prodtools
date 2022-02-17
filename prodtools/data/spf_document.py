@@ -121,13 +121,12 @@ def _add_article_id_to_received_documents(
         pid_v2 = _get_pid_v2(pids_to_append_in_xml, article,
                              issn_id, year_and_order)
 
-        # Obtém v3 do XML
-        pid_v3 = article.get_scielo_pid("v3")
-
         # Obtém previous do XML
         prev_pid = _get_previous_pid_v2(pids_to_append_in_xml, article,
                                         update_article_with_aop_status)
 
+        # Obtém v3 do XML
+        pid_v3 = article.get_scielo_pid("v3")
 
         # consulta / registra / atualiza os dados na base pid_manager
         result = pid_manager.manage(
@@ -139,15 +138,9 @@ def _add_article_id_to_received_documents(
         results[xml_name] = result
 
         record = result.get("saved") or result.get("registered") or {}
-        v3 = record.get("v3")
+        v3 = _get_pid_v3(pids_to_append_in_xml, article, record.get("v3"))
         if v3:
             registered_v3_items[xml_name] = v3
-
-        if pid_v3 is None:
-            # se v3 não está no presente no XML
-            article.registered_scielo_id = v3
-            # anotar para ser inserido no XML
-            pids_to_append_in_xml.append((v3, "scielo-v3"))
 
         # atualiza aop pid, se aplicável
         if record and not prev_pid:
