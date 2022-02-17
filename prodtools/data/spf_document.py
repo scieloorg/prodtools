@@ -115,38 +115,15 @@ def _add_article_id_to_received_documents(
         if not file_path:
             LOGGER.debug("Could not find XML path for '%s' xml.", xml_name)
 
-        pids_to_append_in_xml = []
-
-        # Obtém v2 do XML
-        pid_v2 = _get_pid_v2(pids_to_append_in_xml, article,
-                             issn_id, year_and_order)
-
-        # Obtém previous do XML
-        prev_pid = _get_previous_pid_v2(pids_to_append_in_xml, article,
-                                        update_article_with_aop_status)
-
-        # Obtém v3 do XML
-        pid_v3 = article.get_scielo_pid("v3")
-
-        # consulta / registra / atualiza os dados na base pid_manager
-        result = pid_manager.manage(
-            v2=pid_v2, v3=pid_v3, aop=prev_pid,
-            filename=os.path.basename(file_path),
-            doi=article.doi,
-            status="",
-            generate_v3=generates)
-        results[xml_name] = result
-
-        record = result.get("saved") or result.get("registered") or {}
-
-        registered_v3_items[xml_name] = (
-            _get_pid_v3(pids_to_append_in_xml, article, record.get("v3"))
+        response = _get_pids_to_append_in_xml(
+            pid_manager, article, issn_id, year_and_order,
+            file_path,
+            update_article_with_aop_status,
         )
 
-        # atualiza aop pid, se aplicável
-        _migrate_pid_v2_to_previous_pid(
-            pids_to_append_in_xml, record, pid_v2, prev_pid
-        )
+        results[xml_name] = response['pid_manager_result']
+        registered_v3_items[xml_name] = response['registered_v3']
+        pids_to_append_in_xml = response['pids_to_append_in_xml']
 
         # atualizar o XML com pids_to_append_in_xml
         update_xml_file(file_path, pids_to_append_in_xml)
@@ -208,6 +185,51 @@ def _get_pid_v3(pids_to_append_in_xml, article, pid_manager_v3):
         pids_to_append_in_xml.append((pid_manager_v3, "scielo-v3"))
 
     return pid_v3
+
+
+def _get_pids_to_append_in_xml(pid_manager, article, issn_id, year_and_order,
+                               file_path,
+                               update_article_with_aop_status,
+                               ):
+
+    pids_to_append_in_xml = []
+
+    # Obtém v2 do XML
+    pid_v2 = _get_pid_v2(pids_to_append_in_xml, article,
+                         issn_id, year_and_order)
+
+    # Obtém previous do XML
+    prev_pid = _get_previous_pid_v2(pids_to_append_in_xml, article,
+                                    update_article_with_aop_status)
+
+    # Obtém v3 do XML
+    pid_v3 = article.get_scielo_pid("v3")
+
+    # consulta / registra / atualiza os dados na base pid_manager
+    result = pid_manager.manage(
+        v2=pid_v2, v3=pid_v3, aop=prev_pid,
+        filename=os.path.basename(file_path),
+        doi=article.doi,
+        status="",
+        generate_v3=generates)
+
+    record = result.get("saved") or result.get("registered") or {}
+
+    registered_v3 = (
+        _get_pid_v3(pids_to_append_in_xml, article, record.get("v3"))
+    )
+
+    # atualiza aop pid, se aplicável
+    print(pids_to_append_in_xml, record, pid_v2, prev_pid)
+    _migrate_pid_v2_to_previous_pid(
+        pids_to_append_in_xml, record, pid_v2, prev_pid
+    )
+
+    return {
+        "pid_manager_result": result,
+        "pids_to_append_in_xml": pids_to_append_in_xml,
+        "registered_v3": registered_v3
+    }
 
 
 def build_scielo_pid_v2(issn_id, year_and_order, order_in_issue):
