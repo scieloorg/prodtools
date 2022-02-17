@@ -175,6 +175,17 @@ def _add_article_id_to_received_documents(
         update_xml_file(file_path, pids_to_append_in_xml)
 
 
+def _get_pid_v2(pids_to_append_in_xml, article, issn_id, year_and_order):
+    # Obtém v2 do XML
+    pid_v2 = article.get_scielo_pid("v2")
+    if pid_v2 is None:
+        # se v2 não está presente no XML, gerar a partir dos metadados
+        pid_v2 = build_scielo_pid_v2(issn_id, year_and_order, article.order)
+        # anotar para ser inserido no XML
+        pids_to_append_in_xml.append((pid_v2, "scielo-v2"))
+    return pid_v2
+
+
 def build_scielo_pid_v2(issn_id, year_and_order, order_in_issue):
     year = year_and_order[:4]
     order_in_year = year_and_order[4:].zfill(4)
