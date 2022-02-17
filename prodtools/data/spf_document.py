@@ -118,27 +118,15 @@ def _add_article_id_to_received_documents(
         pids_to_append_in_xml = []
 
         # Obtém v2 do XML
-        pid_v2 = article.get_scielo_pid("v2")
-        if pid_v2 is None:
-            # se v2 não está presente no XML, gerar a partir dos metadados
-            pid_v2 = build_scielo_pid_v2(issn_id, year_and_order, article.order)
-            # anotar para ser inserido no XML
-            pids_to_append_in_xml.append((pid_v2, "scielo-v2"))
+        pid_v2 = _get_pid_v2(pids_to_append_in_xml, article,
+                             issn_id, year_and_order)
 
         # Obtém v3 do XML
         pid_v3 = article.get_scielo_pid("v3")
 
         # Obtém previous do XML
-        prev_pid = article.previous_article_pid
-        if not prev_pid:
-            # Não há previous do XML
-            # Obtém previous_pid registrado na base ahead do artigo
-            if update_article_with_aop_status:
-                update_article_with_aop_status(article)
-            # acessa previous_pid com `article.registered_aop_pid`
-            prev_pid = article.registered_aop_pid
-            if prev_pid:
-                pids_to_append_in_xml.append((prev_pid, "previous-pid"))
+        prev_pid = _get_previous_pid_v2(pids_to_append_in_xml, article,
+                                        update_article_with_aop_status)
 
 
         # consulta / registra / atualiza os dados na base pid_manager
