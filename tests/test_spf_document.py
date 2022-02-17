@@ -139,3 +139,43 @@ class TestSPFDocumentBuildPidV2(unittest.TestCase):
         self.assertEqual("S3456-09872009000554321", result)
 
 
+class TestSPFDocumentGetPidV2(unittest.TestCase):
+    """docstring for TestSPFDocument"""
+
+    def test__get_pid_v2__returns_pid_in_xml(self):
+        pids_to_append_in_xml = []
+
+        pid_in_xml = "S3456-09872009000554321"
+        mock_article = MockArticle(
+            pid_v3="naoimporta",
+            pid_v2=pid_in_xml,
+        )
+
+        result = spf_document._get_pid_v2(
+            pids_to_append_in_xml,
+            mock_article,
+            issn_id="3456-0987",
+            year_and_order="20095"
+        )
+        self.assertEqual(pid_in_xml, result)
+        self.assertEqual([], pids_to_append_in_xml)
+
+    def test__get_pid_v2__returns_built_pid(self):
+        pids_to_append_in_xml = []
+        mock_article = MockArticle(
+            pid_v3="naoimporta",
+            pid_v2=None,
+        )
+
+        result = spf_document._get_pid_v2(
+            pids_to_append_in_xml,
+            mock_article,
+            issn_id="3456-0987",
+            year_and_order="200913"
+        )
+        self.assertEqual("S3456-09872009001312345", result)
+        self.assertEqual(
+            [("S3456-09872009001312345", "scielo-v2")],
+            pids_to_append_in_xml
+        )
+
