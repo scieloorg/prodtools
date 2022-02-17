@@ -138,9 +138,10 @@ def _add_article_id_to_received_documents(
         results[xml_name] = result
 
         record = result.get("saved") or result.get("registered") or {}
-        v3 = _get_pid_v3(pids_to_append_in_xml, article, record.get("v3"))
-        if v3:
-            registered_v3_items[xml_name] = v3
+
+        registered_v3_items[xml_name] = (
+            _get_pid_v3(pids_to_append_in_xml, article, record.get("v3"))
+        )
 
         # atualiza aop pid, se aplicável
         if record and not prev_pid:
@@ -154,6 +155,24 @@ def _add_article_id_to_received_documents(
 
         # atualizar o XML com pids_to_append_in_xml
         update_xml_file(file_path, pids_to_append_in_xml)
+
+
+def _migrate_pid_v2_to_previous_pid(pids_to_append_in_xml, record, pid_v2, prev_pid):
+    if record and not prev_pid:
+        # artigo não tem previous pid
+
+        # recupera previous pid do pid_manager
+        recovered_aop_pid = record.get("aop")
+        if not recovered_aop_pid:
+            # não há previous pid no pid_manager, mas
+            # como o v2 recuperado do pid_manager é diferente do v2 do xml
+            # ele deve ser o previous-pid
+            if record.get("v2") and pid_v2 and pid_v2 != record.get("v2"):
+                recovered_aop_pid = record.get("v2")
+        if recovered_aop_pid:
+            # se há previous-pid, atualiza o XML com previous-pid
+            pids_to_append_in_xml.append(
+                (recovered_aop_pid, "previous-pid"))
 
 
 def _get_pid_v2(pids_to_append_in_xml, article, issn_id, year_and_order):

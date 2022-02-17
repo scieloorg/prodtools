@@ -283,5 +283,64 @@ class TestSPFDocumentGetV3(unittest.TestCase):
         )
 
         self.assertEqual("new_v3_provided_by_pid_manager", result)
-        self.assertEqual([("xxx", "scielo-v2"), ("new_v3_provided_by_pid_manager", "scielo-v3")],
+        self.assertEqual([("xxx", "scielo-v2"),
+                          ("new_v3_provided_by_pid_manager", "scielo-v3")],
                          pids_to_append_in_xml)
+
+
+class TestSPFDocumentTransferPidV2ToPreviousPid(unittest.TestCase):
+    """docstring for TestSPFDocument"""
+
+    def test__migrate_pid_v2_to_previous_pid(self):
+        pids_to_append_in_xml = [("doc_pid_v2", "scielo-v2")]
+
+        record = {"v2": "pid_manager_v2"}
+        pid_v2 = "doc_pid_v2"
+        prev_pid = None
+
+        spf_document._migrate_pid_v2_to_previous_pid(
+            pids_to_append_in_xml,
+            record, pid_v2, prev_pid,
+        )
+        self.assertEqual(
+            [("doc_pid_v2", "scielo-v2"),
+             ("pid_manager_v2", "previous-pid"),
+             ],
+            pids_to_append_in_xml)
+
+    def test__migrate_pid_v2_to_previous_pid_does_not_migrate(self):
+        pids_to_append_in_xml = [("pid_v2", "scielo-v2")]
+
+        record = {"v2": "pid_v2"}
+        pid_v2 = "pid_v2"
+        prev_pid = None
+
+        spf_document._migrate_pid_v2_to_previous_pid(
+            pids_to_append_in_xml,
+            record, pid_v2, prev_pid,
+        )
+        # nao atualiza pids_to_append_in_xml
+        self.assertEqual(
+            [("pid_v2", "scielo-v2"),
+             ],
+            pids_to_append_in_xml)
+
+    def test__migrate_pid_v2_to_previous_pid_does_not_migrate2(self):
+        pids_to_append_in_xml = [("pid_v2", "scielo-v2")]
+
+        # recuperado v2 diferente do v2 atual
+        record = {"v2": "pid_v2"}
+        pid_v2 = "pid_v2"
+
+        # xml já tem previous pid
+        prev_pid = "aop_pid"
+
+        spf_document._migrate_pid_v2_to_previous_pid(
+            pids_to_append_in_xml,
+            record, pid_v2, prev_pid,
+        )
+        # nao atualiza pids_to_append_in_xml
+        self.assertEqual(
+            [("pid_v2", "scielo-v2"),
+             ],
+            pids_to_append_in_xml)
