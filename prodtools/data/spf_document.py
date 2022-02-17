@@ -144,14 +144,9 @@ def _add_article_id_to_received_documents(
         )
 
         # atualiza aop pid, se aplicável
-        if record and not prev_pid:
-            recovered_aop_pid = record.get("aop")
-            if not recovered_aop_pid:
-                if record.get("v2") and pid_v2 and pid_v2 != record.get("v2"):
-                    recovered_aop_pid = record.get("v2")
-            if recovered_aop_pid:
-                pids_to_append_in_xml.append(
-                    (recovered_aop_pid, "previous-pid"))
+        _migrate_pid_v2_to_previous_pid(
+            pids_to_append_in_xml, record, pid_v2, prev_pid
+        )
 
         # atualizar o XML com pids_to_append_in_xml
         update_xml_file(file_path, pids_to_append_in_xml)
