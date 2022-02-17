@@ -186,6 +186,21 @@ def _get_pid_v2(pids_to_append_in_xml, article, issn_id, year_and_order):
     return pid_v2
 
 
+def _get_previous_pid_v2(pids_to_append_in_xml, article, update_article_with_aop_status):
+    # Obtém previous do XML
+    prev_pid = article.previous_article_pid
+    if not prev_pid:
+        # Não há previous do XML
+        # Obtém previous_pid registrado na base ahead do artigo
+        if update_article_with_aop_status:
+            update_article_with_aop_status(article)
+        # acessa previous_pid com `article.registered_aop_pid`
+        prev_pid = article.registered_aop_pid
+        if prev_pid:
+            pids_to_append_in_xml.append((prev_pid, "previous-pid"))
+    return prev_pid
+
+
 def build_scielo_pid_v2(issn_id, year_and_order, order_in_issue):
     year = year_and_order[:4]
     order_in_year = year_and_order[4:].zfill(4)

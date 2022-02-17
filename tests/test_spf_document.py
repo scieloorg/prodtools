@@ -11,8 +11,12 @@ from copy import deepcopy
 from prodtools.data import spf_document
 
 
+def mock_update_article_with_aop_status(article):
+    article.registered_aop_pid = "saved_in_isis"
+
+
 class MockArticle:
-    def __init__(self, pid_v3, pid_v2, db_prev_pid=None, prev_pid=None):
+    def __init__(self, pid_v3=None, pid_v2=None, db_prev_pid=None, prev_pid=None):
         # este atributo não existe no Article real
         self._scielo_pid = pid_v2
 
@@ -179,3 +183,51 @@ class TestSPFDocumentGetPidV2(unittest.TestCase):
             pids_to_append_in_xml
         )
 
+
+class TestSPFDocumentGetPreviousPidV2(unittest.TestCase):
+    """docstring for TestSPFDocument"""
+
+    def test__get_previous_pid_v2__returns_pid_in_xml(self):
+        pids_to_append_in_xml = []
+
+        in_xml = "S3456-09872009000554321"
+        mock_article = MockArticle(prev_pid=in_xml)
+
+        result = spf_document._get_previous_pid_v2(
+            pids_to_append_in_xml,
+            mock_article,
+            mock_update_article_with_aop_status,
+        )
+
+        self.assertEqual(in_xml, result)
+        self.assertEqual([], pids_to_append_in_xml)
+
+    def test__get_previous_pid_v2__returns_got_from_db(self):
+        pids_to_append_in_xml = [("xxx", "scielo-v2")]
+        mock_article = MockArticle()
+
+        result = spf_document._get_previous_pid_v2(
+            pids_to_append_in_xml,
+            mock_article,
+            mock_update_article_with_aop_status,
+        )
+        self.assertEqual("saved_in_isis", result)
+        self.assertEqual(
+            [("xxx", "scielo-v2"),
+             ("saved_in_isis", "previous-pid")],
+            pids_to_append_in_xml
+        )
+
+    def test__get_previous_pid_v2__returns_none_because_there_is_none(self):
+        pids_to_append_in_xml = [("xxx", "scielo-v2")]
+
+        mock_article = MockArticle()
+
+        result = spf_document._get_previous_pid_v2(
+            pids_to_append_in_xml,
+            mock_article,
+            lambda x: None,
+        )
+
+        self.assertIsNone(result)
+        self.assertEqual([("xxx", "scielo-v2")], pids_to_append_in_xml)
