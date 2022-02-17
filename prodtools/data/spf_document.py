@@ -121,7 +121,7 @@ def _add_article_id_to_received_documents(
         pid_v2 = article.get_scielo_pid("v2")
         if pid_v2 is None:
             # se v2 não está presente no XML, gerar a partir dos metadados
-            pid_v2 = get_scielo_pid_v2(issn_id, year_and_order, article.order)
+            pid_v2 = build_scielo_pid_v2(issn_id, year_and_order, article.order)
             # anotar para ser inserido no XML
             pids_to_append_in_xml.append((pid_v2, "scielo-v2"))
 
@@ -139,6 +139,7 @@ def _add_article_id_to_received_documents(
             prev_pid = article.registered_aop_pid
             if prev_pid:
                 pids_to_append_in_xml.append((prev_pid, "previous-pid"))
+
 
         # consulta / registra / atualiza os dados na base pid_manager
         result = pid_manager.manage(
@@ -174,7 +175,7 @@ def _add_article_id_to_received_documents(
         update_xml_file(file_path, pids_to_append_in_xml)
 
 
-def get_scielo_pid_v2(issn_id, year_and_order, order_in_issue):
+def build_scielo_pid_v2(issn_id, year_and_order, order_in_issue):
     year = year_and_order[:4]
     order_in_year = year_and_order[4:].zfill(4)
     return "".join(("S", issn_id, year, order_in_year, order_in_issue))
