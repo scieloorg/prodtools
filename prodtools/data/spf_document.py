@@ -239,7 +239,7 @@ def _get_pids_to_append_in_xml(pid_manager, article, issn_id, year_and_order,
 
     # atualiza aop pid, se aplicável
     print(pids_to_append_in_xml, record, pid_v2, prev_pid)
-    _migrate_pid_v2_to_previous_pid(
+    _update_pid_values_with_values_registered_in_pid_manager(
         pids_to_append_in_xml, record, pid_v2, prev_pid
     )
 

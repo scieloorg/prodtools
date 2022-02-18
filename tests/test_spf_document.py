@@ -547,7 +547,7 @@ class TestSPFDocumentGetPidsToAppendInXml(unittest.TestCase):
         self.assertEqual(
             expected_registered_v3, response['registered_v3'])
 
-    @unittest.skip("precisa implentar atualização de pids")
+    #@unittest.skip("precisa implentar atualização de pids")
     def test__get_pids_to_append_in_xml__pid_manager_returns_registered_v3_and_v2_different_from_built_v2(self):
         """
         Test new document, previous-pid recovered from pid_manager, not from isis
@@ -566,7 +566,7 @@ class TestSPFDocumentGetPidsToAppendInXml(unittest.TestCase):
             "registered": {
                 "v2": "S3456-09872009000512345",
                 "v3": "registered_v3",
-                "previous-pid": "S3456-09872009005099345",
+                "aop": "S3456-09872009005099345",
             }
         }
 
@@ -589,7 +589,7 @@ class TestSPFDocumentGetPidsToAppendInXml(unittest.TestCase):
             "registered": {
                 "v2": "S3456-09872009000512345",
                 "v3": "registered_v3",
-                "previous-pid": "S3456-09872009005099345",
+                "aop": "S3456-09872009005099345",
             }
         }
         expected_registered_v3 = "registered_v3"
@@ -799,7 +799,7 @@ class TestSPFDocumentAddArticleIdToReceivedDocuments(unittest.TestCase):
         )
 
 
-class TestSPFDocumentTransferPidV2ToPreviousPid(unittest.TestCase):
+class TestSPFDocumentupdatePidValuesWithValuesRegisteredInPidManager(unittest.TestCase):
 
     def test__update_pid_values_with_values_registered_in_pid_manager__updates_v2_and_previous_pid(self):
         pids_to_append_in_xml = [("doc_pid_v2", "scielo-v2")]
