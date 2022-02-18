@@ -344,6 +344,98 @@ class TestSPFDocumentTransferPidV2ToPreviousPid(unittest.TestCase):
 
 class TestSPFDocumentGetPidsToAppendInXml(unittest.TestCase):
 
+    def test__get_pids_to_append_in_xml__new_document_and_not_ex_aop(self):
+        """
+        Test registration of new document, not aop
+        - v3 = generated
+        - v2 = built using issn, year, issue_order, order
+        - no previous-pid
+        """
+        expected_pids_to_append_in_xml = [
+            ("S3456-09872009000512345", "scielo-v2"),
+            ("generated_v3", "scielo-v3"),
+        ]
+        expected_pid_manager_result = {
+            "saved": {
+                "v2": "S3456-09872009000512345",
+                "v3": "generated_v3",
+            }
+        }
+        expected_registered_v3 = "generated_v3"
+
+        mock_article = MockArticle(order="12345")
+        mock_pid_manager = Mock()
+        mock_pid_manager.manage = Mock()
+        mock_pid_manager.manage.return_value = {
+            "saved": {
+                "v2": "S3456-09872009000512345",
+                "v3": "generated_v3",
+            }
+        }
+
+        mock_update_article_with_aop_status = Mock(return_value = None)
+
+        response = spf_document._get_pids_to_append_in_xml(
+            pid_manager=mock_pid_manager,
+            article=mock_article,
+            issn_id="3456-0987",
+            year_and_order="20095",
+            file_path="/path/abc.xml",
+            update_article_with_aop_status=mock_update_article_with_aop_status,
+        )
+        self.assertEqual(
+            expected_pids_to_append_in_xml, response['pids_to_append_in_xml'])
+        self.assertEqual(
+            expected_pid_manager_result, response['pid_manager_result'])
+        self.assertEqual(
+            expected_registered_v3, response['registered_v3'])
+
+    def test__get_pids_to_append_in_xml__new_document_and_is_aop(self):
+        """
+        Test registration of new document which is aop
+        - v3 = generated
+        - v2 = built using issn, year, issue_order, order
+        - no previous-pid
+        """
+        expected_pids_to_append_in_xml = [
+            ("S3456-09872009005099345", "scielo-v2"),
+            ("generated_v3", "scielo-v3"),
+        ]
+        expected_pid_manager_result = {
+            "saved": {
+                "v2": "S3456-09872009005099345",
+                "v3": "generated_v3",
+            }
+        }
+        expected_registered_v3 = "generated_v3"
+
+        mock_update_article_with_aop_status = Mock(return_value = None)
+
+        mock_article = MockArticle(order="99345")
+        mock_pid_manager = Mock()
+        mock_pid_manager.manage = Mock()
+        mock_pid_manager.manage.return_value = {
+            "saved": {
+                "v2": "S3456-09872009005099345",
+                "v3": "generated_v3",
+            }
+        }
+
+        response = spf_document._get_pids_to_append_in_xml(
+            pid_manager=mock_pid_manager,
+            article=mock_article,
+            issn_id="3456-0987",
+            year_and_order="200950",
+            file_path="/path/abc.xml",
+            update_article_with_aop_status=mock_update_article_with_aop_status,
+        )
+        self.assertEqual(
+            expected_pids_to_append_in_xml, response['pids_to_append_in_xml'])
+        self.assertEqual(
+            expected_pid_manager_result, response['pid_manager_result'])
+        self.assertEqual(
+            expected_registered_v3, response['registered_v3'])
+
     def test__get_pids_to_append_in_xml__all_the_ids_were_generated_or_recovered(self):
         """
         Generate or recover v3 (v3 is returned by pid_manager)
