@@ -436,33 +436,34 @@ class TestSPFDocumentGetPidsToAppendInXml(unittest.TestCase):
         self.assertEqual(
             expected_registered_v3, response['registered_v3'])
 
-    def test__get_pids_to_append_in_xml__all_the_ids_were_generated_or_recovered(self):
+    def test__get_pids_to_append_in_xml__new_document_but_has_aop_version(self):
         """
-        Generate or recover v3 (v3 is returned by pid_manager)
-        Build v2
-        Recover previous_id from isis
+        Test new document but has aop version
+        - v3 = recover from pid_manager
+        - v2 = built using issn, year, issue_order, order
+        - previous_pid = recover from isis
         """
         expected_pids_to_append_in_xml = [
             ("S3456-09872009000512345", "scielo-v2"),
             ("saved_in_isis", "previous-pid"),
-            ("generated_v3", "scielo-v3"),
+            ("v3_recovered_from_pid_manager", "scielo-v3"),
         ]
         expected_pid_manager_result = {
-            "saved": {
+            "registered": {
                 "v2": "S3456-09872009000512345",
-                "v3": "generated_v3",
+                "v3": "v3_recovered_from_pid_manager",
                 "aop": "saved_in_isis",
             }
         }
-        expected_registered_v3 = "generated_v3"
+        expected_registered_v3 = "v3_recovered_from_pid_manager"
 
         mock_article = MockArticle()
         mock_pid_manager = Mock()
         mock_pid_manager.manage = Mock()
         mock_pid_manager.manage.return_value = {
-            "saved": {
+            "registered": {
                 "v2": "S3456-09872009000512345",
-                "v3": "generated_v3",
+                "v3": "v3_recovered_from_pid_manager",
                 "aop": "saved_in_isis",
             }
         }
@@ -482,34 +483,36 @@ class TestSPFDocumentGetPidsToAppendInXml(unittest.TestCase):
         self.assertEqual(
             expected_registered_v3, response['registered_v3'])
 
-    def test__get_pids_to_append_in_xml__v3_generated_and_v2_built_and_no_previous_pid_exists(self):
+    def test__get_pids_to_append_in_xml__update_document(self):
         """
-        Generate or recover v3 (v3 is returned by pid_manager)
-        Build v2
-        There is no previous_id in isis
+        Test update document
+        - v3 = recover from pid_manager
+        - v2 = built using issn, year, issue_order, order /
+               but confirmed by pid_manager
+        - previous_pid = none
         """
         def f(article):
             article.registered_aop_pid = None
 
         expected_pids_to_append_in_xml = [
             ("S3456-09872009000512345", "scielo-v2"),
-            ("generated_v3", "scielo-v3"),
+            ("recovered_v3", "scielo-v3"),
         ]
         expected_pid_manager_result = {
-            "saved": {
+            "registered": {
                 "v2": "S3456-09872009000512345",
-                "v3": "generated_v3",
+                "v3": "recovered_v3",
             }
         }
-        expected_registered_v3 = "generated_v3"
+        expected_registered_v3 = "recovered_v3"
 
         mock_article = MockArticle()
         mock_pid_manager = Mock()
         mock_pid_manager.manage = Mock()
         mock_pid_manager.manage.return_value = {
-            "saved": {
+            "registered": {
                 "v2": "S3456-09872009000512345",
-                "v3": "generated_v3",
+                "v3": "recovered_v3",
             }
         }
 
