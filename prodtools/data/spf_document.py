@@ -31,7 +31,7 @@ def update_xml_file(file_path, pids_to_append_in_xml):
         LOGGER.info("%s is not a valid XML", file_path)
     else:
         # atualizar XML com os `pids_to_append_in_xml`
-        _tree = add_article_id_to_etree(tree, pids_to_append_in_xml)
+        _tree = update_article_id_in_xml(tree, pids_to_append_in_xml)
         write_etree_to_file(_tree, file_path)
 
 
@@ -256,7 +256,7 @@ def build_scielo_pid_v2(issn_id, year_and_order, order_in_issue):
     return "".join(("S", issn_id, year, order_in_year, order_in_issue))
 
 
-def add_article_id_to_etree(
+def update_article_id_in_xml(
     tree: etree.ElementTree, pid_and_specific_use_items: list
 ) -> Optional[etree.ElementTree]:
     """Adiciona os pids v2 e v3 a árvore lxml de um documento"""
@@ -278,11 +278,19 @@ def add_article_id_to_etree(
         return None
 
     for id_value, specific_use in pid_and_specific_use_items:
-        article_id = etree.Element("article-id")
-        article_id.text = id_value
-        article_id.set("specific-use", specific_use)
-        article_id.set("pub-id-type", "publisher-id")
-        article_meta.insert(0, article_id)
+        node = article_meta.find(f".//article-id[@specific-use='{specific_use}']")
+
+        if id_value and node is None:
+            article_id = etree.Element("article-id")
+            article_id.text = id_value
+            article_id.set("specific-use", specific_use)
+            article_id.set("pub-id-type", "publisher-id")
+            article_meta.insert(0, article_id)
+        elif id_value:
+            node.text = id_value
+        elif node is not None:
+            article_meta.remove(node)
+
     return _tree
 
 

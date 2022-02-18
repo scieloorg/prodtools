@@ -56,11 +56,11 @@ class TestSPFDocumentWriteFile(unittest.TestCase):
         )
 
     def test_add_pids_to_etree_should_return_none_if_etree_is_not_valid(self):
-        self.assertIsNone(spf_document.add_article_id_to_etree(None, []))
+        self.assertIsNone(spf_document.update_article_id_in_xml(None, []))
 
     def test_add_pids_to_etree_should_not_update_if_pid_list_is_empty(self):
         tree = etree.fromstring("<article><article-meta></article-meta></article>")
-        self.assertIsNone(spf_document.add_article_id_to_etree(tree, []))
+        self.assertIsNone(spf_document.update_article_id_in_xml(tree, []))
 
     def test_add_pids_to_etree_insert_article_id_elements(self):
         tree = etree.fromstring(
@@ -68,7 +68,7 @@ class TestSPFDocumentWriteFile(unittest.TestCase):
                 <article-meta></article-meta>
             </article>"""
         )
-        _tree = spf_document.add_article_id_to_etree(
+        _tree = spf_document.update_article_id_in_xml(
             tree, [("random-pid", "pid-v3"), ("random-pid-2", "pid-v2"), ]
         )
         self.assertIn(
@@ -80,13 +80,29 @@ class TestSPFDocumentWriteFile(unittest.TestCase):
             etree.tostring(_tree),
         )
 
+    def test_update_article_id_in_xml__delete_article_id(self):
+        tree = etree.fromstring(
+            """<article>
+                <article-meta>
+            <article-id specific-use="pid-v3" pub-id-type="publisher-id">random-pid</article-id>
+                </article-meta>
+            </article>"""
+        )
+        _tree = spf_document.update_article_id_in_xml(
+            tree, [(None, "pid-v3"),]
+        )
+        self.assertNotIn(
+            b'<article-id specific-use="pid-v3" pub-id-type="publisher-id">random-pid</article-id>',
+            etree.tostring(_tree),
+        )
+
     def test_add_pids_to_etree_should_etree_with_pid_v3(self):
         tree = etree.fromstring(
             """<article>
                 <article-meta></article-meta>
             </article>"""
         )
-        _tree = spf_document.add_article_id_to_etree(
+        _tree = spf_document.update_article_id_in_xml(
             tree, [("random-pid", "pid-v3",)]
         )
         self.assertIn(
@@ -95,7 +111,7 @@ class TestSPFDocumentWriteFile(unittest.TestCase):
         )
 
     def test_add_pids_to_etree_should_not_modify_the_documents_doctype(self):
-        _tree = spf_document.add_article_id_to_etree(
+        _tree = spf_document.update_article_id_in_xml(
             self.tree, [("random-pid", "pid-v3",)]
         )
         self.assertIn(
