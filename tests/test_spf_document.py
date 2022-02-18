@@ -11,12 +11,19 @@ from copy import deepcopy
 from prodtools.data import spf_document
 
 
+def load_xml(text):
+    return etree.parse(StringIO(text), etree.XMLParser())
+
+
 def mock_update_article_with_aop_status(article):
     article.registered_aop_pid = "saved_in_isis"
 
 
 class MockArticle:
-    def __init__(self, pid_v3=None, pid_v2=None, db_prev_pid=None, prev_pid=None):
+    def __init__(self, pid_v3=None, pid_v2=None,
+                 db_prev_pid=None, prev_pid=None,
+                 order=None,
+                 ):
         # este atributo não existe no Article real
         self._scielo_pid = pid_v2
 
@@ -25,7 +32,7 @@ class MockArticle:
         self.registered_scielo_id = None
         self.registered_aop_pid = db_prev_pid
         self.previous_article_pid = prev_pid
-        self.order = "12345"
+        self.order = order or "12345"
         self.doi = ""
 
     def get_scielo_pid(self, name):
@@ -35,42 +42,17 @@ class MockArticle:
         return self._scielo_pid
 
 
-class TestSPFDocumentAddArticleIdToReceivedDocuments(unittest.TestCase):
-    def setUp(self):
-        self.files = ["file" + str(i) + ".xml" for i in range(1, 6)]
-        for f in self.files:
-            with open(f, "wb") as fp:
-                fp.write(b"<article><article-meta></article-meta></article>")
-
-    def tearDown(self):
-        for f in self.files:
-            try:
-                os.unlink(f)
-            except IOError:
-                pass
-
-    def _return_scielo_pid_v3_if_aop_pid_match(self, prev_pid, pid):
-        """Representa a busca pelo PID v3 a partir do PID v2"""
-        if prev_pid == "AOPPID":
-            return "pid-v3-registrado-anteriormente-para-documento-aop"
-        return "brzWFrVFdpYMXdpvq7dDJBQ"
-
-
 class TestSPFDocumentWriteFile(unittest.TestCase):
 
     def setUp(self):
-
-        self.tree = etree.parse(
-            StringIO(
-                """<!DOCTYPE article PUBLIC "-//NLM//DTD JATS (Z39.96) Journal Publishing DTD v1.1 20151215//EN" "https://jats.nlm.nih.gov/publishing/1.1/JATS-journalpublishing1.dtd">
-                    <article>
-                        <article-meta>
-                            <field>São Paulo - É, ê, È, ç</field>
-                        </article-meta>
-                    </article>
-                """
-            ),
-            etree.XMLParser(),
+        self.tree = load_xml(
+            """<!DOCTYPE article PUBLIC "-//NLM//DTD JATS (Z39.96) Journal Publishing DTD v1.1 20151215//EN" "https://jats.nlm.nih.gov/publishing/1.1/JATS-journalpublishing1.dtd">
+                <article>
+                    <article-meta>
+                        <field>São Paulo - É, ê, È, ç</field>
+                    </article-meta>
+                </article>
+            """
         )
 
     def test_add_pids_to_etree_should_return_none_if_etree_is_not_valid(self):
@@ -79,6 +61,24 @@ class TestSPFDocumentWriteFile(unittest.TestCase):
     def test_add_pids_to_etree_should_not_update_if_pid_list_is_empty(self):
         tree = etree.fromstring("<article><article-meta></article-meta></article>")
         self.assertIsNone(spf_document.add_article_id_to_etree(tree, []))
+
+    def test_add_pids_to_etree_insert_article_id_elements(self):
+        tree = etree.fromstring(
+            """<article>
+                <article-meta></article-meta>
+            </article>"""
+        )
+        _tree = spf_document.add_article_id_to_etree(
+            tree, [("random-pid", "pid-v3"), ("random-pid-2", "pid-v2"), ]
+        )
+        self.assertIn(
+            b'<article-id specific-use="pid-v3" pub-id-type="publisher-id">random-pid</article-id>',
+            etree.tostring(_tree),
+        )
+        self.assertIn(
+            b'<article-id specific-use="pid-v2" pub-id-type="publisher-id">random-pid-2</article-id>',
+            etree.tostring(_tree),
+        )
 
     def test_add_pids_to_etree_should_etree_with_pid_v3(self):
         tree = etree.fromstring(
@@ -485,7 +485,6 @@ class TestSPFDocumentGetPidsToAppendInXml(unittest.TestCase):
         self.assertEqual(
             expected_registered_v3, response['registered_v3'])
 
-
     def test__get_pids_to_append_in_xml__pid_manager_returns__(self):
         """
         pid_manager returns registered v3
@@ -536,3 +535,150 @@ class TestSPFDocumentGetPidsToAppendInXml(unittest.TestCase):
             expected_pid_manager_result, response['pid_manager_result'])
         self.assertEqual(
             expected_registered_v3, response['registered_v3'])
+
+
+class TestSPFDocumentAddArticleIdToReceivedDocuments(unittest.TestCase):
+
+    def setUp(self):
+        self.files = ["file" + str(i) + ".xml" for i in range(1, 6)]
+        for f in self.files:
+            with open(f, "wb") as fp:
+                fp.write(b"<article><article-meta></article-meta></article>")
+        self.received = {
+            "file1": MockArticle(None, None, order="00001"),
+            "file2": MockArticle(None, None, order="00002"),
+            "file3": MockArticle(None, None, order="00003"),
+            "file4": MockArticle(None, None, order="00004"),
+        }
+        self.file_paths = {
+            name: fname
+            for name, fname in zip(self.received.keys(), self.files)
+        }
+        self.issn_id = "9876-3456"
+        self.year_and_order = "20173"
+
+    def tearDown(self):
+        for f in self.files:
+            try:
+                os.unlink(f)
+            except IOError:
+                pass
+
+    def test__add_article_id_to_received_documents__inserted_ids_in_xml(self):
+        registered = {}
+        results = {}
+        mock_pid_manager = Mock()
+        mock_pid_manager.manage.side_effect = [
+            {"saved" :{
+                "v3": "generated_v3_1",
+                "v2": "S9876-34562017000300001",
+            }},
+            {"registered": {
+                "v3": "registered_v3",
+                "v2": "S9876-34562017000300002",
+            }},
+            {"saved": {
+                "v3": "generated_v3_3",
+                "v2": "S9876-34562017000300003",
+                "aop": "recovered_from_isis",
+            }},
+            {"registered": {
+                "v3": "registered_v3_4",
+                "v2": "S9876-34562017000300004",
+                "aop": "recovered_from_isis_4",
+            }}
+        ]
+
+        mock_update_article_with_aop_status = Mock(
+            side_effect=[
+                None, None, "recovered_from_isis", "recovered_from_isis_4"
+            ]
+        )
+
+        spf_document.generates = Mock(
+            side_effect=[
+                "generated_v3_1",
+                "generated_v3_3",
+            ]
+        )
+        spf_document._add_article_id_to_received_documents(
+            pid_manager=mock_pid_manager,
+            issn_id=self.issn_id,
+            year_and_order=self.year_and_order,
+            received_docs=self.received,
+            file_paths=self.file_paths,
+            update_article_with_aop_status=mock_update_article_with_aop_status,
+            registered_v3_items=registered,
+            results=results,
+        )
+        expected = [
+            {
+                "scielo-v3": "generated_v3_1",
+                "scielo-v2": "S9876-34562017000300001",
+            },
+            {
+                "scielo-v3": "registered_v3",
+                "scielo-v2": "S9876-34562017000300002",
+            },
+            {
+                "scielo-v3": "generated_v3_3",
+                "scielo-v2": "S9876-34562017000300003",
+                "previous-pid": "recovered_from_isis",
+            },
+            {
+                "scielo-v3": "registered_v3_4",
+                "scielo-v2": "S9876-34562017000300004",
+                "previous-pid": "recovered_from_isis_4",
+            },
+        ]
+        for index, recv in enumerate(self.received.items()):
+            name, item = recv
+            with self.subTest(name):
+                with open(self.file_paths[name], "r") as fp:
+                    c = fp.read()
+                    print(c)
+                xml = etree.fromstring(c)
+                self.assertEqual(
+                    expected[index].get('scielo-v3'),
+                    xml.findtext(".//article-id[@specific-use='scielo-v3']")
+                )
+                self.assertEqual(
+                    expected[index].get('scielo-v2'),
+                    xml.findtext(".//article-id[@specific-use='scielo-v2']")
+                )
+                self.assertEqual(
+                    expected[index].get('previous-pid'),
+                    xml.findtext(".//article-id[@specific-use='previous-pid']")
+                )
+        self.assertDictEqual(
+            {"file1":
+                {"saved" :{
+                    "v3": "generated_v3_1",
+                    "v2": "S9876-34562017000300001",
+                }},
+            "file2": {"registered": {
+                    "v3": "registered_v3",
+                    "v2": "S9876-34562017000300002",
+                }},
+            "file3": {"saved": {
+                    "v3": "generated_v3_3",
+                    "v2": "S9876-34562017000300003",
+                    "aop": "recovered_from_isis",
+                }},
+            "file4": {"registered": {
+                    "v3": "registered_v3_4",
+                    "v2": "S9876-34562017000300004",
+                    "aop": "recovered_from_isis_4",
+                }}
+            },
+            results
+        )
+        self.assertDictEqual({
+                "file1": "generated_v3_1",
+                "file2": "registered_v3",
+                "file3": "generated_v3_3",
+                "file4": "registered_v3_4",
+            },
+            registered
+        )
+

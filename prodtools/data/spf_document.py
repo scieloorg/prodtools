@@ -60,7 +60,6 @@ def add_article_id_to_received_documents(
                 issn_id,
                 year_and_order,
                 received_docs,
-                documents_in_isis,
                 file_paths,
                 update_article_with_aop_status,
                 registered_v3_items,
@@ -87,7 +86,6 @@ def _add_article_id_to_received_documents(
     issn_id: str,
     year_and_order: str,
     received_docs: dict,
-    documents_in_isis: dict,
     file_paths: dict,
     update_article_with_aop_status: callable,
     registered_v3_items: dict,
@@ -100,7 +98,6 @@ def _add_article_id_to_received_documents(
         issn_id (str): ISSN do periódico
         year_and_order (str): Ano e ordem da issue processada
         received_docs (dict): Pacote de documentos recebidos para processar
-        documents_in_isis (dict): Documentos já registrados na base isis (acron/volnum)
         file_paths (dict): arquivos do received_docs
         update_article_with_aop_status (callable): Função que recupera o AOP PID e modifica o
             artigo com este dado
@@ -265,7 +262,6 @@ def add_article_id_to_etree(
         article_id.set("specific-use", specific_use)
         article_id.set("pub-id-type", "publisher-id")
         article_meta.insert(0, article_id)
-
     return _tree
 
 
