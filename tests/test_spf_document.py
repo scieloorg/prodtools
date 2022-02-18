@@ -454,7 +454,7 @@ class TestSPFDocumentGetPidsToAppendInXml(unittest.TestCase):
 
     def test__get_pids_to_append_in_xml__new_document_but_has_aop_version(self):
         """
-        Test new document but has aop version
+        Test new version of document which current version is aop
         - v3 = recover from pid_manager
         - v2 = built using issn, year, issue_order, order
         - previous_pid = recover from isis
@@ -499,9 +499,9 @@ class TestSPFDocumentGetPidsToAppendInXml(unittest.TestCase):
         self.assertEqual(
             expected_registered_v3, response['registered_v3'])
 
-    def test__get_pids_to_append_in_xml__update_document(self):
+    def test__get_pids_to_append_in_xml__update_document_which_has_no_previous_id(self):
         """
-        Test update document
+        Test update document which has no previous_pid
         - v3 = recover from pid_manager
         - v2 = built using issn, year, issue_order, order /
                but confirmed by pid_manager
@@ -547,7 +547,55 @@ class TestSPFDocumentGetPidsToAppendInXml(unittest.TestCase):
         self.assertEqual(
             expected_registered_v3, response['registered_v3'])
 
-    #@unittest.skip("precisa implentar atualização de pids")
+    def test__get_pids_to_append_in_xml__update_document_which_has_previous_id(self):
+        """
+        Test update document which has previous_pid
+        - v3 = recover from pid_manager
+        - v2 = built using issn, year, issue_order, order /
+               it is also registered in pid_manager as v2
+        - previous_pid = recover from isis and
+                         it is also registered in pid_manager as aop
+        """
+        def f(article):
+            article.registered_aop_pid = "S3456-09872009005092345"
+
+        expected_pids_to_append_in_xml = [
+            ("S3456-09872009000512345", "scielo-v2"),
+            ("recovered_v3", "scielo-v3"),
+        ]
+        expected_pid_manager_result = {
+            "registered": {
+                "v2": "S3456-09872009000512345",
+                "v3": "recovered_v3",
+            }
+        }
+        expected_registered_v3 = "recovered_v3"
+
+        mock_article = MockArticle()
+        mock_pid_manager = Mock()
+        mock_pid_manager.manage = Mock()
+        mock_pid_manager.manage.return_value = {
+            "registered": {
+                "v2": "S3456-09872009000512345",
+                "v3": "recovered_v3",
+            }
+        }
+
+        response = spf_document._get_pids_to_append_in_xml(
+            pid_manager=mock_pid_manager,
+            article=mock_article,
+            issn_id="3456-0987",
+            year_and_order="20095",
+            file_path="/path/abc.xml",
+            update_article_with_aop_status=f,
+        )
+        self.assertEqual(
+            expected_pids_to_append_in_xml, response['pids_to_append_in_xml'])
+        self.assertEqual(
+            expected_pid_manager_result, response['pid_manager_result'])
+        self.assertEqual(
+            expected_registered_v3, response['registered_v3'])
+
     def test__get_pids_to_append_in_xml__pid_manager_returns_registered_v3_and_v2_different_from_built_v2(self):
         """
         Test new document, previous-pid recovered from pid_manager, not from isis
@@ -601,56 +649,37 @@ class TestSPFDocumentGetPidsToAppendInXml(unittest.TestCase):
         self.assertEqual(
             expected_registered_v3, response['registered_v3'])
 
-    def test__get_pids_to_append_in_xml__pid_manager_returns__(self):
+    def test__get_pids_to_append_in_xml__pid_manager__new_metadata_but_v2_belongs_to_another_document(self):
         """
-        pid_manager returns registered v3
-        Build v2
-        pid_manager returns a different v2 (pid de aop?)
+        Test register document with conflicts:
+            - METADATA are NOT REGISTERED (new document)
+            - v2 is REGISTERED (another document)
+
+        then keep the conflicting v2, because:
+        a) v3 and the other metadata will be used to desambiguation purpose
+        b) probably the other document v2 was also changed to other ID
+
+        - create new record
+        - v3 = generates new record, with new v3
+        - v2 = built using issn, year, issue_order, order /
+               use the conflicting v2 as v2 for the new record
         """
-        def f(article):
-            article.registered_aop_pid = None
+        pass
 
-        mock_article = MockArticle()
-        mock_pid_manager = Mock()
-        mock_pid_manager.manage = Mock()
-        mock_pid_manager.manage.return_value = {
-            "registered": {
-                "v2": "v2_registered_at_pid_manager",
-                "v3": "v3_registered_at_pid_manager",
-                "aop": "aop_registered_at_pid_manager"
-            }
-        }
+    def test__get_pids_to_append_in_xml__pid_manager__v2_changed(self):
+        """
+        Test register document with conflicts:
+            - METADATA are REGISTERED (document is registered)
+            - registered v2 does not match with document v2
 
-        response = spf_document._get_pids_to_append_in_xml(
-            pid_manager=mock_pid_manager,
-            article=mock_article,
-            issn_id="3456-0987",
-            year_and_order="20095",
-            file_path="/path/abc.xml",
-            update_article_with_aop_status=f,
-        )
-
-        expected_pids_to_append_in_xml = [
-            ("S3456-09872009000512345", "scielo-v2"),
-            ("v3_registered_at_pid_manager", "scielo-v3"),
-            ("aop_registered_at_pid_manager", "previous-pid"),
-        ]
-
-        expected_pid_manager_result = {
-            "registered": {
-                "v2": "v2_registered_at_pid_manager",
-                "v3": "v3_registered_at_pid_manager",
-                "aop": "aop_registered_at_pid_manager"
-            }
-        }
-        expected_registered_v3 = "v3_registered_at_pid_manager"
-
-        self.assertEqual(
-            expected_pids_to_append_in_xml, response['pids_to_append_in_xml'])
-        self.assertEqual(
-            expected_pid_manager_result, response['pid_manager_result'])
-        self.assertEqual(
-            expected_registered_v3, response['registered_v3'])
+        - update same record
+        - v3 = recover v3
+        - v2 = built using issn, year, issue_order, order /
+               it does not match with registered v2 and it is not aop version /
+               v2 was changed / accept the document v2 as update /
+               add as other pid
+        """
+        pass
 
 
 class TestSPFDocumentAddArticleIdToReceivedDocuments(unittest.TestCase):
