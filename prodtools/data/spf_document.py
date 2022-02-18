@@ -111,6 +111,7 @@ def _add_article_id_to_received_documents(
         file_path = file_paths.get(xml_name)
         if not file_path:
             LOGGER.debug("Could not find XML path for '%s' xml.", xml_name)
+            continue
 
         response = _get_pids_to_append_in_xml(
             pid_manager, article, issn_id, year_and_order,
@@ -237,8 +238,6 @@ def _get_pids_to_append_in_xml(pid_manager, article, issn_id, year_and_order,
         _get_pid_v3(pids_to_append_in_xml, article, record.get("v3"))
     )
 
-    # atualiza aop pid, se aplicável
-    print(pids_to_append_in_xml, record, pid_v2, prev_pid)
     _update_pid_values_with_values_registered_in_pid_manager(
         pids_to_append_in_xml, record, pid_v2, prev_pid
     )

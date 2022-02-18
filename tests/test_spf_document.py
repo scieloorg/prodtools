@@ -42,6 +42,65 @@ class MockArticle:
         return self._scielo_pid
 
 
+class TestSPFDocumentUpdateXmlFile(unittest.TestCase):
+
+    def setUp(self):
+        self.temporary_file = tempfile.mktemp()
+        content = (
+            """<!DOCTYPE article PUBLIC "-//NLM//DTD JATS (Z39.96) Journal Publishing DTD v1.1 20151215//EN" "https://jats.nlm.nih.gov/publishing/1.1/JATS-journalpublishing1.dtd">
+                <article>
+                    <article-meta>
+                        <field>São Paulo - É, ê, È, ç</field>
+                    </article-meta>
+                </article>
+            """
+        )
+        with open(self.temporary_file, "w") as fp:
+            fp.write(content)
+
+    def tearDown(self):
+        try:
+            os.unlink(self.temporary_file)
+        except IOError:
+            pass
+
+    def test_update_xml_file_insert_article_id_elements(self):
+        spf_document.update_xml_file(
+            self.temporary_file,
+            [("random-pid", "pid-v3"), ("random-pid-2", "pid-v2"), ]
+        )
+        with open(self.temporary_file) as fp:
+            content = fp.read()
+        self.assertIn(
+            '<article-id specific-use="pid-v3" pub-id-type="publisher-id">random-pid</article-id>',
+            content,
+        )
+        self.assertIn(
+            '<article-id specific-use="pid-v2" pub-id-type="publisher-id">random-pid-2</article-id>',
+            content
+        )
+
+    def test_update_xml_file_should_not_modify_the_documents_doctype(self):
+        spf_document.update_xml_file(
+            self.temporary_file,
+            [("random-pid", "pid-v3"), ("random-pid-2", "pid-v2"), ]
+        )
+        with open(self.temporary_file) as fp:
+            content = fp.read()
+        self.assertIn(
+            """<!DOCTYPE article PUBLIC "-//NLM//DTD JATS (Z39.96) Journal Publishing DTD v1.1 20151215//EN" "https://jats.nlm.nih.gov/publishing/1.1/JATS-journalpublishing1.dtd">""",
+            content
+        )
+
+    def test_update_xml_file_should_not_convert_character_to_entity(self):
+        spf_document.update_xml_file(
+            self.temporary_file,
+            [("random-pid", "pid-v3"), ("random-pid-2", "pid-v2"), ]
+        )
+        with open(self.temporary_file) as fp:
+            self.assertIn("São Paulo - É, ê, È, ç", fp.read())
+
+
 class TestSPFDocumentWriteFile(unittest.TestCase):
 
     def setUp(self):
