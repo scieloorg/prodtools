@@ -373,7 +373,7 @@ class TestSPFDocumentGetPidsToAppendInXml(unittest.TestCase):
             }
         }
 
-        mock_update_article_with_aop_status = Mock(return_value = None)
+        mock_update_article_with_aop_status = Mock(return_value=None)
 
         response = spf_document._get_pids_to_append_in_xml(
             pid_manager=mock_pid_manager,
@@ -409,7 +409,7 @@ class TestSPFDocumentGetPidsToAppendInXml(unittest.TestCase):
         }
         expected_registered_v3 = "generated_v3"
 
-        mock_update_article_with_aop_status = Mock(return_value = None)
+        mock_update_article_with_aop_status = Mock(return_value=None)
 
         mock_article = MockArticle(order="99345")
         mock_pid_manager = Mock()
@@ -531,11 +531,14 @@ class TestSPFDocumentGetPidsToAppendInXml(unittest.TestCase):
         self.assertEqual(
             expected_registered_v3, response['registered_v3'])
 
+    @unittest.skip("precisa implentar atualização de pids")
     def test__get_pids_to_append_in_xml__pid_manager_returns_registered_v3_and_v2_different_from_built_v2(self):
         """
-        pid_manager returns registered v3
-        Build v2
-        pid_manager returns a different v2 (pid de aop?)
+        Test new document, previous-pid recovered from pid_manager, not from isis
+        - v3 = recover from pid_manager
+        - v2 = built using issn, year, issue_order, order /
+               but found other v2 registered in pid_manager (version aop)
+        - previous_pid = none (not registered in isis)
         """
         def f(article):
             article.registered_aop_pid = None
@@ -545,8 +548,9 @@ class TestSPFDocumentGetPidsToAppendInXml(unittest.TestCase):
         mock_pid_manager.manage = Mock()
         mock_pid_manager.manage.return_value = {
             "registered": {
-                "v2": "pid_of_ex_ahead",
+                "v2": "S3456-09872009000512345",
                 "v3": "registered_v3",
+                "previous-pid": "S3456-09872009005099345",
             }
         }
 
@@ -562,13 +566,14 @@ class TestSPFDocumentGetPidsToAppendInXml(unittest.TestCase):
         expected_pids_to_append_in_xml = [
             ("S3456-09872009000512345", "scielo-v2"),
             ("registered_v3", "scielo-v3"),
-            ("pid_of_ex_ahead", "previous-pid"),
+            ("S3456-09872009005099345", "previous-pid"),
         ]
 
         expected_pid_manager_result = {
             "registered": {
-                "v2": "pid_of_ex_ahead",
+                "v2": "S3456-09872009000512345",
                 "v3": "registered_v3",
+                "previous-pid": "S3456-09872009005099345",
             }
         }
         expected_registered_v3 = "registered_v3"
@@ -777,3 +782,55 @@ class TestSPFDocumentAddArticleIdToReceivedDocuments(unittest.TestCase):
             registered
         )
 
+
+class TestSPFDocumentTransferPidV2ToPreviousPid(unittest.TestCase):
+
+    def test__update_pid_values_with_values_registered_in_pid_manager__updates_v2_and_previous_pid(self):
+        pids_to_append_in_xml = [("doc_pid_v2", "scielo-v2")]
+
+        record = {"v2": "pid_manager_v2", "aop": "pid_manager_aop"}
+        pid_v2 = "doc_pid_v2"
+        prev_pid = None
+
+        spf_document._update_pid_values_with_values_registered_in_pid_manager(
+            pids_to_append_in_xml,
+            record, pid_v2, prev_pid,
+        )
+        self.assertEqual(
+            [("doc_pid_v2", "scielo-v2"),
+             ("pid_manager_v2", "scielo-v2"),
+             ("pid_manager_aop", "previous-pid"),
+             ],
+            pids_to_append_in_xml)
+
+    def test__update_pid_values_with_values_registered_in_pid_manager__updates_previous_pid_only(self):
+        pids_to_append_in_xml = [("doc_pid_v2", "scielo-v2")]
+
+        record = {"v2": "doc_pid_v2", "aop": "pid_manager_aop"}
+        pid_v2 = "doc_pid_v2"
+        prev_pid = None
+
+        spf_document._update_pid_values_with_values_registered_in_pid_manager(
+            pids_to_append_in_xml,
+            record, pid_v2, prev_pid,
+        )
+        self.assertEqual(
+            [("doc_pid_v2", "scielo-v2"), ("pid_manager_aop", "previous-pid")],
+            pids_to_append_in_xml
+        )
+
+    def test__update_pid_values_with_values_registered_in_pid_manager__delete_previous_pid(self):
+        pids_to_append_in_xml = [("pid_v2", "scielo-v2")]
+
+        record = {"v2": "pid_v2"}
+        pid_v2 = "pid_v2"
+        prev_pid = "aop_pid"
+
+        spf_document._update_pid_values_with_values_registered_in_pid_manager(
+            pids_to_append_in_xml,
+            record, pid_v2, prev_pid,
+        )
+        self.assertEqual(
+            [("pid_v2", "scielo-v2"), (None, "previous-pid")],
+            pids_to_append_in_xml
+        )

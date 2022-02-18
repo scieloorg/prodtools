@@ -144,6 +144,27 @@ def _migrate_pid_v2_to_previous_pid(pids_to_append_in_xml, record, pid_v2, prev_
                 (recovered_aop_pid, "previous-pid"))
 
 
+def _update_pid_values_with_values_registered_in_pid_manager(
+        pids_to_append_in_xml, record, pid_v2, prev_pid):
+    """
+    Os valores recuperados são mais confiávies, pois foram obtidos
+    dos registros da base de dados que guardam outros dados para a comparação /
+    validação
+    """
+    if not record:
+        return
+
+    items = [
+        ("scielo-v2", record.get("v2"), pid_v2),
+        ("previous-pid", record.get("aop"), prev_pid),
+    ]
+    for specific_use, registered_value, original_value in items:
+        if registered_value != original_value:
+            pids_to_append_in_xml.append(
+                (registered_value, specific_use)
+            )
+
+
 def _get_pid_v2(pids_to_append_in_xml, article, issn_id, year_and_order):
     # Obtém v2 do XML
     pid_v2 = article.get_scielo_pid("v2")
