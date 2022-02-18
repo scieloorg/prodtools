@@ -380,8 +380,14 @@ class TestSPFDocumentGetPidsToAppendInXml(unittest.TestCase):
         expected_registered_v3 = "generated_v3"
 
         mock_article = MockArticle(order="12345")
+
+        # pid_manager é um módulo da biblioteca scielo_v3_manager
+        # which has to manage the data conflicts, v3 generation or recover
+        # and other related questions
         mock_pid_manager = Mock()
         mock_pid_manager.manage = Mock()
+        # saved = new record, recently created
+        # registered = query result
         mock_pid_manager.manage.return_value = {
             "saved": {
                 "v2": "S3456-09872009000512345",
@@ -428,8 +434,14 @@ class TestSPFDocumentGetPidsToAppendInXml(unittest.TestCase):
         mock_update_article_with_aop_status = Mock(return_value=None)
 
         mock_article = MockArticle(order="99345")
+
+        # pid_manager é um módulo da biblioteca scielo_v3_manager
+        # which has to manage the data conflicts, v3 generation or recover
+        # and other related questions
         mock_pid_manager = Mock()
         mock_pid_manager.manage = Mock()
+        # saved = new record, recently created
+        # registered = query result
         mock_pid_manager.manage.return_value = {
             "saved": {
                 "v2": "S3456-09872009005099345",
@@ -474,8 +486,14 @@ class TestSPFDocumentGetPidsToAppendInXml(unittest.TestCase):
         expected_registered_v3 = "v3_recovered_from_pid_manager"
 
         mock_article = MockArticle()
+
+        # pid_manager é um módulo da biblioteca scielo_v3_manager
+        # which has to manage the data conflicts, v3 generation or recover
+        # and other related questions
         mock_pid_manager = Mock()
         mock_pid_manager.manage = Mock()
+        # saved = new record, recently created
+        # registered = query result
         mock_pid_manager.manage.return_value = {
             "registered": {
                 "v2": "S3456-09872009000512345",
@@ -523,8 +541,14 @@ class TestSPFDocumentGetPidsToAppendInXml(unittest.TestCase):
         expected_registered_v3 = "recovered_v3"
 
         mock_article = MockArticle()
+
+        # pid_manager é um módulo da biblioteca scielo_v3_manager
+        # which has to manage the data conflicts, v3 generation or recover
+        # and other related questions
         mock_pid_manager = Mock()
         mock_pid_manager.manage = Mock()
+        # saved = new record, recently created
+        # registered = query result
         mock_pid_manager.manage.return_value = {
             "registered": {
                 "v2": "S3456-09872009000512345",
@@ -561,23 +585,32 @@ class TestSPFDocumentGetPidsToAppendInXml(unittest.TestCase):
 
         expected_pids_to_append_in_xml = [
             ("S3456-09872009000512345", "scielo-v2"),
+            ("S3456-09872009005092345", "previous-pid"),
             ("recovered_v3", "scielo-v3"),
         ]
         expected_pid_manager_result = {
             "registered": {
                 "v2": "S3456-09872009000512345",
                 "v3": "recovered_v3",
+                "aop": "S3456-09872009005092345",
             }
         }
         expected_registered_v3 = "recovered_v3"
 
         mock_article = MockArticle()
+
+        # pid_manager é um módulo da biblioteca scielo_v3_manager
+        # which has to manage the data conflicts, v3 generation or recover
+        # and other related questions
         mock_pid_manager = Mock()
         mock_pid_manager.manage = Mock()
+        # saved = new record, recently created
+        # registered = query result
         mock_pid_manager.manage.return_value = {
             "registered": {
                 "v2": "S3456-09872009000512345",
                 "v3": "recovered_v3",
+                "aop": "S3456-09872009005092345",
             }
         }
 
@@ -608,8 +641,14 @@ class TestSPFDocumentGetPidsToAppendInXml(unittest.TestCase):
             article.registered_aop_pid = None
 
         mock_article = MockArticle()
+
+        # pid_manager é um módulo da biblioteca scielo_v3_manager
+        # which has to manage the data conflicts, v3 generation or recover
+        # and other related questions
         mock_pid_manager = Mock()
         mock_pid_manager.manage = Mock()
+        # saved = new record, recently created
+        # registered = query result
         mock_pid_manager.manage.return_value = {
             "registered": {
                 "v2": "S3456-09872009000512345",
@@ -664,7 +703,53 @@ class TestSPFDocumentGetPidsToAppendInXml(unittest.TestCase):
         - v2 = built using issn, year, issue_order, order /
                use the conflicting v2 as v2 for the new record
         """
-        pass
+        def f(article):
+            article.registered_aop_pid = None
+
+        mock_article = MockArticle()
+
+        # pid_manager é um módulo da biblioteca scielo_v3_manager
+        # which has to manage the data conflicts, v3 generation or recover
+        # and other related questions
+        mock_pid_manager = Mock()
+        mock_pid_manager.manage = Mock()
+        # saved = new record, recently created
+        # registered = query result
+        mock_pid_manager.manage.return_value = {
+            "saved": {
+                "v2": "S3456-09872009000512345",
+                "v3": "generated_v3",
+            }
+        }
+
+        response = spf_document._get_pids_to_append_in_xml(
+            pid_manager=mock_pid_manager,
+            article=mock_article,
+            issn_id="3456-0987",
+            year_and_order="20095",
+            file_path="/path/abc.xml",
+            update_article_with_aop_status=f,
+        )
+
+        expected_pids_to_append_in_xml = [
+            ("S3456-09872009000512345", "scielo-v2"),
+            ("generated_v3", "scielo-v3"),
+        ]
+
+        expected_pid_manager_result = {
+            "saved": {
+                "v2": "S3456-09872009000512345",
+                "v3": "generated_v3",
+            }
+        }
+        expected_registered_v3 = "generated_v3"
+
+        self.assertEqual(
+            expected_pids_to_append_in_xml, response['pids_to_append_in_xml'])
+        self.assertEqual(
+            expected_pid_manager_result, response['pid_manager_result'])
+        self.assertEqual(
+            expected_registered_v3, response['registered_v3'])
 
     def test__get_pids_to_append_in_xml__pid_manager__v2_changed(self):
         """
@@ -677,9 +762,55 @@ class TestSPFDocumentGetPidsToAppendInXml(unittest.TestCase):
         - v2 = built using issn, year, issue_order, order /
                it does not match with registered v2 and it is not aop version /
                v2 was changed / accept the document v2 as update /
-               add as other pid
+               replace v2
         """
-        pass
+        def f(article):
+            article.registered_aop_pid = None
+
+        mock_article = MockArticle()
+
+        # pid_manager é um módulo da biblioteca scielo_v3_manager
+        # which has to manage the data conflicts, v3 generation or recover
+        # and other related questions
+        mock_pid_manager = Mock()
+        mock_pid_manager.manage = Mock()
+        # saved = new record, recently created
+        # registered = query result
+        mock_pid_manager.manage.return_value = {
+            "registered": {
+                "v2": "S3456-09872009000512345",
+                "v3": "registered_v3",
+            }
+        }
+
+        response = spf_document._get_pids_to_append_in_xml(
+            pid_manager=mock_pid_manager,
+            article=mock_article,
+            issn_id="3456-0987",
+            year_and_order="20095",
+            file_path="/path/abc.xml",
+            update_article_with_aop_status=f,
+        )
+
+        expected_pids_to_append_in_xml = [
+            ("S3456-09872009000512345", "scielo-v2"),
+            ("registered_v3", "scielo-v3"),
+        ]
+
+        expected_pid_manager_result = {
+            "registered": {
+                "v2": "S3456-09872009000512345",
+                "v3": "registered_v3",
+            }
+        }
+        expected_registered_v3 = "registered_v3"
+
+        self.assertEqual(
+            expected_pids_to_append_in_xml, response['pids_to_append_in_xml'])
+        self.assertEqual(
+            expected_pid_manager_result, response['pid_manager_result'])
+        self.assertEqual(
+            expected_registered_v3, response['registered_v3'])
 
 
 class TestSPFDocumentAddArticleIdToReceivedDocuments(unittest.TestCase):
@@ -712,6 +843,10 @@ class TestSPFDocumentAddArticleIdToReceivedDocuments(unittest.TestCase):
     def test__add_article_id_to_received_documents__inserted_ids_in_xml(self):
         registered = {}
         results = {}
+
+        # pid_manager é um módulo da biblioteca scielo_v3_manager
+        # which has to manage the data conflicts, v3 generation or recover
+        # and other related questions
         mock_pid_manager = Mock()
         mock_pid_manager.manage.side_effect = [
             {"saved" :{
