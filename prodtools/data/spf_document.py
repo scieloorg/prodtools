@@ -225,12 +225,14 @@ def _get_pids_to_append_in_xml(pid_manager, article, issn_id, year_and_order,
     pid_v3 = article.get_scielo_pid("v3")
 
     # consulta / registra / atualiza os dados na base pid_manager
-    result = pid_manager.manage(
-        v2=pid_v2, v3=pid_v3, aop=prev_pid,
-        filename=os.path.basename(file_path),
-        doi=article.doi,
-        status="",
-        generate_v3=generates)
+    result = _manage_pids(
+        pid_manager,
+        pid_v2,
+        pid_v3,
+        prev_pid,
+        file_path,
+        article,
+    )
 
     record = result.get("saved") or result.get("registered") or {}
 
@@ -247,6 +249,17 @@ def _get_pids_to_append_in_xml(pid_manager, article, issn_id, year_and_order,
         "pids_to_append_in_xml": pids_to_append_in_xml,
         "registered_v3": registered_v3
     }
+
+
+def _manage_pids(pid_manager, pid_v2, pid_v3, prev_pid, file_path, article):
+    # consulta / registra / atualiza os dados na base pid_manager
+    result = pid_manager.manage(
+        v2=pid_v2, v3=pid_v3, aop=prev_pid,
+        filename=os.path.basename(file_path),
+        doi=article.doi,
+        status="",
+        generate_v3=generates)
+    return result
 
 
 def build_scielo_pid_v2(issn_id, year_and_order, order_in_issue):

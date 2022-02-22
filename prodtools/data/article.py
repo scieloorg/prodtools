@@ -1566,6 +1566,10 @@ class ArticleXML(object):
 
     @property
     def real_pubdate(self):
+        """
+        Retorna a data de publicação no website
+            {"year": "", "month": "", "day": "", "season": ""}
+        """
         return self.raw_pubdate_datetype_pub or self.raw_pubdate_pubtype_epub
 
     @property
