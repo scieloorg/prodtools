@@ -252,13 +252,40 @@ def _get_pids_to_append_in_xml(pid_manager, article, issn_id, year_and_order,
 
 
 def _manage_pids(pid_manager, pid_v2, pid_v3, prev_pid, file_path, article):
+    number = article.number if article.number not in ("ahead", "0") else None
+
+    authors = article.article_contrib_items
+    if authors:
+        first_author_surname = authors[0].surname
+        last_author_surname = authors[-1].surname
+    else:
+        first_author_surname = None
+        last_author_surname = None
+
+    article_title = article.titles[0].title if article.titles else ''
+
     # consulta / registra / atualiza os dados na base pid_manager
-    result = pid_manager.manage(
-        v2=pid_v2, v3=pid_v3, aop=prev_pid,
-        filename=os.path.basename(file_path),
-        doi=article.doi,
-        status="",
-        generate_v3=generates)
+    result = pid_manager.manage_docs(
+                generate_v3=generates,
+                v2=pid_v2,
+                v3=pid_v3,
+                aop=prev_pid,
+                filename=os.path.basename(file_path),
+                doi=article.doi,
+                status="",
+                pub_year=(article.real_pubdate or {}).get("year"),
+                issue_order=year_and_order[4:],
+                volume=article.volume,
+                number=number,
+                suppl=(article.number_suppl or article.volume_suppl),
+                elocation=article.elocation_id,
+                fpage=article.fpage,
+                lpage=article.lpage,
+                first_author_surname=first_author_surname,
+                last_author_surname=last_author_surname,
+                article_title=article_title,
+                other_pids="",
+            )
     return result
 
 
