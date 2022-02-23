@@ -9,6 +9,7 @@ from io import StringIO
 from lxml import etree
 from copy import deepcopy
 from prodtools.data import spf_document
+from prodtools.data.article import Article
 
 
 def load_xml(text):
@@ -19,10 +20,16 @@ def mock_update_article_with_aop_status(article):
     article.registered_aop_pid = "saved_in_isis"
 
 
+class MockContrib:
+
+    def __init__(self, surname):
+        self.surname = surname
+
+
 class MockArticle:
     def __init__(self, pid_v3=None, pid_v2=None,
                  db_prev_pid=None, prev_pid=None,
-                 order=None,
+                 order=None, number=None,
                  ):
         # este atributo não existe no Article real
         self._scielo_pid = pid_v2
@@ -34,6 +41,17 @@ class MockArticle:
         self.previous_article_pid = prev_pid
         self.order = order or "12345"
         self.doi = ""
+        self.number = number or "5"
+        self.article_contrib_items = [MockContrib("Silva"), MockContrib("Souza"), ]
+        self.titles = []
+        self.real_pubdate = {"year": "2020"}
+        self.volume = "31"
+        self.suppl = "A"
+        self.number_suppl = "B"
+        self.volume_suppl = "C"
+        self.elocation_id = "eloca"
+        self.fpage = "fpage"
+        self.lpage = "lpage"
 
     def get_scielo_pid(self, name):
         # simula o get_scielo_pid real
@@ -444,10 +462,10 @@ class TestSPFDocumentGetPidsToAppendInXml(unittest.TestCase):
         # which has to manage the data conflicts, v3 generation or recover
         # and other related questions
         mock_pid_manager = Mock()
-        mock_pid_manager.manage = Mock()
+        mock_pid_manager.manage_docs = Mock()
         # saved = new record, recently created
         # registered = query result
-        mock_pid_manager.manage.return_value = {
+        mock_pid_manager.manage_docs.return_value = {
             "saved": {
                 "v2": "S3456-09872009000512345",
                 "v3": "generated_v3",
@@ -498,10 +516,10 @@ class TestSPFDocumentGetPidsToAppendInXml(unittest.TestCase):
         # which has to manage the data conflicts, v3 generation or recover
         # and other related questions
         mock_pid_manager = Mock()
-        mock_pid_manager.manage = Mock()
+        mock_pid_manager.manage_docs = Mock()
         # saved = new record, recently created
         # registered = query result
-        mock_pid_manager.manage.return_value = {
+        mock_pid_manager.manage_docs.return_value = {
             "saved": {
                 "v2": "S3456-09872009005099345",
                 "v3": "generated_v3",
@@ -550,10 +568,10 @@ class TestSPFDocumentGetPidsToAppendInXml(unittest.TestCase):
         # which has to manage the data conflicts, v3 generation or recover
         # and other related questions
         mock_pid_manager = Mock()
-        mock_pid_manager.manage = Mock()
+        mock_pid_manager.manage_docs = Mock()
         # saved = new record, recently created
         # registered = query result
-        mock_pid_manager.manage.return_value = {
+        mock_pid_manager.manage_docs.return_value = {
             "registered": {
                 "v2": "S3456-09872009000512345",
                 "v3": "v3_recovered_from_pid_manager",
@@ -605,10 +623,10 @@ class TestSPFDocumentGetPidsToAppendInXml(unittest.TestCase):
         # which has to manage the data conflicts, v3 generation or recover
         # and other related questions
         mock_pid_manager = Mock()
-        mock_pid_manager.manage = Mock()
+        mock_pid_manager.manage_docs = Mock()
         # saved = new record, recently created
         # registered = query result
-        mock_pid_manager.manage.return_value = {
+        mock_pid_manager.manage_docs.return_value = {
             "registered": {
                 "v2": "S3456-09872009000512345",
                 "v3": "recovered_v3",
@@ -662,10 +680,10 @@ class TestSPFDocumentGetPidsToAppendInXml(unittest.TestCase):
         # which has to manage the data conflicts, v3 generation or recover
         # and other related questions
         mock_pid_manager = Mock()
-        mock_pid_manager.manage = Mock()
+        mock_pid_manager.manage_docs = Mock()
         # saved = new record, recently created
         # registered = query result
-        mock_pid_manager.manage.return_value = {
+        mock_pid_manager.manage_docs.return_value = {
             "registered": {
                 "v2": "S3456-09872009000512345",
                 "v3": "recovered_v3",
@@ -705,10 +723,10 @@ class TestSPFDocumentGetPidsToAppendInXml(unittest.TestCase):
         # which has to manage the data conflicts, v3 generation or recover
         # and other related questions
         mock_pid_manager = Mock()
-        mock_pid_manager.manage = Mock()
+        mock_pid_manager.manage_docs = Mock()
         # saved = new record, recently created
         # registered = query result
-        mock_pid_manager.manage.return_value = {
+        mock_pid_manager.manage_docs.return_value = {
             "registered": {
                 "v2": "S3456-09872009000512345",
                 "v3": "registered_v3",
@@ -771,10 +789,10 @@ class TestSPFDocumentGetPidsToAppendInXml(unittest.TestCase):
         # which has to manage the data conflicts, v3 generation or recover
         # and other related questions
         mock_pid_manager = Mock()
-        mock_pid_manager.manage = Mock()
+        mock_pid_manager.manage_docs = Mock()
         # saved = new record, recently created
         # registered = query result
-        mock_pid_manager.manage.return_value = {
+        mock_pid_manager.manage_docs.return_value = {
             "saved": {
                 "v2": "S3456-09872009000512345",
                 "v3": "generated_v3",
@@ -832,10 +850,10 @@ class TestSPFDocumentGetPidsToAppendInXml(unittest.TestCase):
         # which has to manage the data conflicts, v3 generation or recover
         # and other related questions
         mock_pid_manager = Mock()
-        mock_pid_manager.manage = Mock()
+        mock_pid_manager.manage_docs = Mock()
         # saved = new record, recently created
         # registered = query result
-        mock_pid_manager.manage.return_value = {
+        mock_pid_manager.manage_docs.return_value = {
             "registered": {
                 "v2": "S3456-09872009000512345",
                 "v3": "registered_v3",
@@ -907,7 +925,7 @@ class TestSPFDocumentAddArticleIdToReceivedDocuments(unittest.TestCase):
         # which has to manage the data conflicts, v3 generation or recover
         # and other related questions
         mock_pid_manager = Mock()
-        mock_pid_manager.manage.side_effect = [
+        mock_pid_manager.manage_docs.side_effect = [
             {"saved" :{
                 "v3": "generated_v3_1",
                 "v2": "S9876-34562017000300001",
@@ -1072,4 +1090,74 @@ class TestSPFDocumentupdatePidValuesWithValuesRegisteredInPidManager(unittest.Te
         self.assertEqual(
             [("pid_v2", "scielo-v2"), (None, "previous-pid")],
             pids_to_append_in_xml
+        )
+
+
+@patch("prodtools.data.spf_document.generates")
+@patch("prodtools.data.spf_document.Manager")
+class TestSPFDocumentManage(unittest.TestCase):
+
+    def setUp(self):
+        content = (
+            """<!DOCTYPE article PUBLIC "-//NLM//DTD JATS (Z39.96) Journal Publishing DTD v1.1 20151215//EN" "https://jats.nlm.nih.gov/publishing/1.1/JATS-journalpublishing1.dtd">
+                <article xml:lang="pt">
+                    <front>
+                    <article-meta>
+                        <field>São Paulo - É, ê, È, ç</field>
+                        <article-id pub-id-type="doi">10.1590/abcdefdoi</article-id>
+                        <title-group><article-title>Este é o título do artigo em português</article-title></title-group>
+                        <pub-date date-type="pub">
+                            <year>2008</year>
+                        </pub-date>
+                        <volume>3</volume>
+                        <issue>2 suppl A</issue>
+                        <fpage>12</fpage>
+                        <lpage>34</lpage>
+                        <contrib-group>
+                            <contrib><surname>Kotlin</surname></contrib>
+                            <contrib><surname>Silva</surname></contrib>
+                            <contrib><surname>Sousa</surname></contrib>
+                            <contrib><surname>Linklus</surname></contrib>
+                        </contrib-group>
+                    </article-meta>
+                    </front>
+                </article>
+            """
+        )
+        self.file_path = "/path/article.xml"
+        self.article = Article(etree.fromstring(content), "article.xml")
+
+    def test_manage(self, mock_pid_manager, mock_v3_gen):
+        pid_v2 = "S9876-34562017000300002"
+        pid_v3 = "DtRHRnPspwkW46DsyczM6wH"
+        prev_pid = "S9876-34562017005000002"
+        year_and_order = "20082"
+
+        result = spf_document._manage_pids(
+            mock_pid_manager,
+            pid_v2, pid_v3, prev_pid,
+            year_and_order,
+            self.file_path,
+            self.article,
+        )
+        mock_pid_manager.manage_docs.assert_called_with(
+            generate_v3=mock_v3_gen,
+            v2=pid_v2,
+            v3=pid_v3,
+            aop=prev_pid,
+            filename="article.xml",
+            doi="10.1590/abcdefdoi",
+            status="",
+            pub_year="2008",
+            issue_order="2",
+            volume="3",
+            number="2",
+            suppl="a",
+            elocation=None,
+            fpage="12",
+            lpage="34",
+            first_author_surname="Kotlin",
+            last_author_surname="Linklus",
+            article_title="Este é o título do artigo em português",
+            other_pids="",
         )

@@ -23,7 +23,7 @@ INSTALL_REQUIRES = [
 ]
 
 dependency_links = [
-    'https://github.com/scieloorg/scielo_v3_manager/@0.6#egg=scielo_v3_manager',
+    'https://github.com/scieloorg/scielo_v3_manager/@0.7#egg=scielo_v3_manager',
 ]
 
 EXTRAS_REQUIRE = {
@@ -46,7 +46,7 @@ if sys.version_info[0:2] == (2, 7):
 
 setup(
     name="SciELO Production Tools",
-    version="1.0",
+    version="1.1",
     description="Produces XML packages and databases to publish",
     long_description=README,
     long_description_content_type="text/markdown",

@@ -230,6 +230,7 @@ def _get_pids_to_append_in_xml(pid_manager, article, issn_id, year_and_order,
         pid_v2,
         pid_v3,
         prev_pid,
+        year_and_order,
         file_path,
         article,
     )
@@ -251,7 +252,7 @@ def _get_pids_to_append_in_xml(pid_manager, article, issn_id, year_and_order,
     }
 
 
-def _manage_pids(pid_manager, pid_v2, pid_v3, prev_pid, file_path, article):
+def _manage_pids(pid_manager, pid_v2, pid_v3, prev_pid, year_and_order, file_path, article):
     number = article.number if article.number not in ("ahead", "0") else None
 
     authors = article.article_contrib_items
