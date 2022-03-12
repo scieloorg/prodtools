@@ -16,7 +16,7 @@ with codecs.open('README.md', mode='r', encoding='utf-8') as fp:
 
 INSTALL_REQUIRES = [
     'packtools>=2.6.4',
-    'Pillow~=6.2.2',
+    'Pillow>=6.2.2,<9.1.0',
     'psycopg2-binary~=2.8',
     'SQLAlchemy~=1.3',
     'scielo_v3_manager',
