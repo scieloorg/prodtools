@@ -67,7 +67,10 @@ def display_author(author):
             if value:
                 texts.append(html_reports.tag('span', value, label))
     else:
-        texts.append(html_reports.tag('span', author.collab, 'collab'))
+        try:
+            texts.append(html_reports.tag('span', author.collab, 'collab'))
+        except AttributeError:
+            texts.append(html_reports.tag('span', author.fullname, 'fullname'))
     return ", ".join([text for text in texts if text])
 
 
