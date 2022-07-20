@@ -208,6 +208,7 @@ class BrokenRef(object):
             mixed_citation_text = mixed_citation_text.replace(
                 link.text, xml_utils.tostring(link)
             )
+        print(mixed_citation_text)
         new_mixed_citation = xml_utils.etree.fromstring(mixed_citation_text)
         parent = mixed_citation.getparent()
         parent.replace(mixed_citation, new_mixed_citation)
