@@ -235,7 +235,7 @@ def _get_pids_to_append_in_xml(pid_manager, article, issn_id, year_and_order,
         article,
     )
 
-    record = result.get("saved") or result.get("registered") or {}
+    record = result.get("created") or result.get("registered") or {}
 
     registered_v3 = (
         _get_pid_v3(pids_to_append_in_xml, article, record.get("v3"))
