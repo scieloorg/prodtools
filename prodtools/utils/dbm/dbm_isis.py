@@ -29,6 +29,10 @@ class CISISIsReadableError(Exception):
     ...
 
 
+class IDFileReadError(Exception):
+    ...
+
+
 def remove_break_lines_characters(content):
     content = content or ""
     return ' '.join(content.split())
@@ -168,6 +172,8 @@ class IDFile(object):
 
     def read(self, filename):
         iso_content = fs_utils.read_file(filename, 'iso-8859-1')
+        if not iso_content:
+            raise IDFileReadError("Unable to read %s: %s" % (filename, e))
         utf8_content = encoding.decode(iso_content)
         utf8_content = html.unescape(utf8_content)
         utf8_content = utf8_content.replace("\\^", PRESERVECIRC)
@@ -378,7 +384,7 @@ class UCISIS(object):
             base = os.path.join(temp_dir, os.path.basename(db_filename))
             self.search(db_filename, expr, base)
 
-        r = None
+        r = []
         id_filename = base + '.id'
         if os.path.isfile(base + '.mst'):
             self.i2id(base, id_filename)
