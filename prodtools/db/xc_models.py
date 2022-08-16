@@ -2,6 +2,7 @@
 
 import os
 import shutil
+import logging
 from tempfile import NamedTemporaryFile
 
 from prodtools import _
@@ -1488,13 +1489,23 @@ class IssueAndTitleManager(object):
             diff = d_source - d_copy
             updated = not (diff.days > 0 or (diff.days == 0 and diff.seconds > 0))
 
+        result = []
         if updated:
-            for first in self.db_isis.get_records(db, expr):
-                return first
+            result = list(self.db_isis.get_records(db, expr))
+        if not result:
+            self.update_db_copy(source_db, db, fst_filename)
+            result = list(self.db_isis.get_records(db, expr))
 
-        self.update_db_copy(source_db, db, fst_filename)
-        for first in self.db_isis.get_records(db, expr):
-            return first
+        if result:
+            return result[0]
+
+        # if updated:
+        #     for first in self.db_isis.get_records(db, expr):
+        #         return first
+
+        # self.update_db_copy(source_db, db, fst_filename)
+        # for first in self.db_isis.get_records(db, expr):
+        #     return first
 
     def get_registered_data(self, journal_title, issue_label, p_issn, e_issn):
         msg = ""
