@@ -290,19 +290,25 @@ class UCISIS(object):
         self.idfile = IDFile()
         self.cisis1030 = cisis1030
         self.cisis1660 = cisis1660
+        self._cisis_and_mst = {}
 
     @property
     def is_available(self):
         return self.cisis1660.is_available or self.cisis1030.is_available
 
     def cisis(self, mst_filename):
-        if os.path.isfile(mst_filename + '.mst'):
-            if self.cisis1030.is_readable(mst_filename):
-                return self.cisis1030
-            elif self.cisis1660.is_readable(mst_filename):
-                return self.cisis1660
-        else:
-            return self.cisis1030
+        _cisis = self._cisis_and_mst.get(mst_filename)
+        if not _cisis:
+            if os.path.isfile(mst_filename + '.mst'):
+                if self.cisis1030.is_readable(mst_filename):
+                    _cisis = self.cisis1030
+                    self._cisis_and_mst[mst_filename] = _cisis
+                elif self.cisis1660.is_readable(mst_filename):
+                    _cisis = self.cisis1660
+                    self._cisis_and_mst[mst_filename] = _cisis
+            else:
+                _cisis = self.cisis1030
+        return _cisis
 
     def version(self, mst_filename):
         if self.cisis1030.is_readable(mst_filename):
