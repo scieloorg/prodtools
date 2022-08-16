@@ -17,6 +17,18 @@ logger = logging.getLogger()
 PRESERVECIRC = '[PRESERVECIRC]'
 
 
+class CISISRunCommandError(Exception):
+    ... 
+
+
+class IDFileWriteError(Exception):
+    ... 
+
+
+class CISISIsReadableError(Exception):
+    ...
+
+
 def remove_break_lines_characters(content):
     content = content or ""
     return ' '.join(content.split())
@@ -41,6 +53,12 @@ class IDFile(object):
 
     def __init__(self, content_formatter=None):
         self.content_formatter = content_formatter
+
+    def _format_records(self, records):
+        index = 0
+        for item in records:
+            index += 1
+            yield (self._format_id(index) + self._format_record(item))
 
     def _format_file(self, records):
         r = []
@@ -105,11 +123,11 @@ class IDFile(object):
         return ""
 
     def _format_subfields(self, subf_and_value_list):
-        first = format_value(subf_and_value_list.get('_') or "")
-        values = [self._format_subfield(k, v)
-                  for k, v in subf_and_value_list.items()]
-        value = "".join(sorted(values))
-        return first + value
+        return (
+            format_value(subf_and_value_list.get('_') or "") +
+            "".join([self._format_subfield(k, subf_and_value_list[k])
+                     for k in sorted(subf_and_value_list.keys())])
+        )
 
     def _tag_content(self, tag, value):
         if not 0 < int(tag) <= 999:
@@ -149,7 +167,6 @@ class IDFile(object):
         return data
 
     def read(self, filename):
-        rec_list = []
         iso_content = fs_utils.read_file(filename, 'iso-8859-1')
         utf8_content = encoding.decode(iso_content)
         utf8_content = html.unescape(utf8_content)
@@ -157,28 +174,28 @@ class IDFile(object):
 
         records = utf8_content.split('!ID ')
         for record in records[1:]:
-            data = self._get_record_data(record)
-            rec_list.append(data)
-        return rec_list
+            yield self._get_record_data(record)
 
     def write(self, filename, records):
         path = os.path.dirname(filename)
         if not os.path.isdir(path):
             os.makedirs(path)
-        content = self._format_file(records)
-        content = html.unescape(content)
+        fs_utils.write_file(filename, "", 'iso-8859-1')
+        for record in self._format_records(records):
+            try:
+                record = html.unescape(record)
 
-        content = content.replace(PRESERVECIRC, "\\^")
+                record = record.replace(PRESERVECIRC, "\\^")
 
-        # converterá a entidades, os caracteres utf-8 que não tem
-        # correspondencia em iso-8859-1
-        content = encoding.encode(content, "iso-8859-1")
-        content = encoding.decode(content, "iso-8859-1")
+                # converterá a entidades, os caracteres utf-8 que não tem
+                # correspondencia em iso-8859-1
+                record = encoding.encode(record, "iso-8859-1")
+                record = encoding.decode(record, "iso-8859-1")
 
-        try:
-            fs_utils.write_file(filename, content, 'iso-8859-1')
-        except (UnicodeError, IOError, OSError) as e:
-            logger.error("Nao foi possivel escrever o arquivo %s: %s", filename, e)
+                fs_utils.append_file(filename, record, 'iso-8859-1')
+            except (UnicodeError, IOError, OSError) as e:
+                raise IDFileWriteError(
+                    "Nao foi possivel escrever o arquivo %s: %s", filename, e)
 
 
 class CISIS(object):
@@ -190,7 +207,10 @@ class CISIS(object):
 
     def run_cmd(self, cmd_name, *args):
         cmd = os.path.join(self.cisis_path, cmd_name) + " " + " ".join(args)
-        return system.run_command(cmd)
+        try:
+            return system.run_command(cmd)
+        except OSError as e:
+            raise CISISRunCommandError("Executed %s. Got %s" % (cmd, e))
 
     @property
     def is_available(self):
@@ -252,8 +272,15 @@ class CISIS(object):
 
     def is_readable(self, mst_filename):
         if os.path.isfile(mst_filename + '.mst'):
-            result = self.run_cmd("mx", mst_filename, "+control now")
-            return "dbxopen" not in result or "nxtmfn" in result
+            try:
+                result = self.run_cmd("mx", mst_filename, "+control now")
+            except CISISRunCommandError as e:
+                raise CISISIsReadableError(
+                    "Unable to check %s is readable: %s" %
+                    (mst_filename, e)
+                )
+            else:
+                return "dbxopen" not in result or "nxtmfn" in result
         return False
 
 
@@ -263,19 +290,25 @@ class UCISIS(object):
         self.idfile = IDFile()
         self.cisis1030 = cisis1030
         self.cisis1660 = cisis1660
+        self._cisis_and_mst = {}
 
     @property
     def is_available(self):
         return self.cisis1660.is_available or self.cisis1030.is_available
 
     def cisis(self, mst_filename):
-        if os.path.isfile(mst_filename + '.mst'):
-            if self.cisis1030.is_readable(mst_filename):
-                return self.cisis1030
-            elif self.cisis1660.is_readable(mst_filename):
-                return self.cisis1660
-        else:
-            return self.cisis1030
+        _cisis = self._cisis_and_mst.get(mst_filename)
+        if not _cisis:
+            if os.path.isfile(mst_filename + '.mst'):
+                if self.cisis1030.is_readable(mst_filename):
+                    _cisis = self.cisis1030
+                    self._cisis_and_mst[mst_filename] = _cisis
+                elif self.cisis1660.is_readable(mst_filename):
+                    _cisis = self.cisis1660
+                    self._cisis_and_mst[mst_filename] = _cisis
+            else:
+                _cisis = self.cisis1030
+        return _cisis
 
     def version(self, mst_filename):
         if self.cisis1030.is_readable(mst_filename):

@@ -2,6 +2,7 @@
 
 import os
 import shutil
+from tempfile import NamedTemporaryFile
 
 from prodtools import _
 
@@ -20,6 +21,10 @@ from prodtools.validations import article_data_reports
 from prodtools import FST_PATH
 from prodtools.utils.dbm import dbm_isis
 from prodtools.db import ws_journals
+
+
+class BaseManagerCreateDBError(Exception):
+    ...
 
 
 ISSN_TYPE_CONVERSION = {
@@ -1060,15 +1065,55 @@ class BaseManager(object):
 
     def create_db(self):
         if os.path.isfile(self.issue_files.id_filename):
-            self.db_isis.id_file_to_db(
-                self.issue_files.id_filename, self.issue_files.base)
+            try:
+                temp_file = NamedTemporaryFile(delete=False)
+                temp_file.close()
+                tmpdb = temp_file.name
+            except OSError as e:
+                raise BaseManagerCreateDBError(
+                    "Unable to create tmpdb for %s: %s" %
+                    (self.issue_files.id_filename, e)
+                )
+
+            try:
+                self.db_isis.id_file_to_db(
+                    self.issue_files.id_filename, tmpdb)
+            except Exception as e:
+                raise BaseManagerCreateDBError(
+                    "Unable to append %s to %s: %s" %
+                    (self.issue_files.id_filename, tmpdb, e)
+                )
+
             for f in os.listdir(self.issue_files.id_path):
-                file_path = os.path.join(self.issue_files.id_path, f)
-                if f == '00000.id':
-                    fs_utils.delete_file_or_folder(file_path)
-                if f.endswith('.id') and f != '00000.id' and f != 'i.id':
+                try:
+                    if not f.endswith('.id') or f == "i.id":
+                        continue
+                    file_path = os.path.join(self.issue_files.id_path, f)
+                    if f == '00000.id':
+                        fs_utils.delete_file_or_folder(file_path)
+                        continue
                     self.db_isis.append_id_file_to_db(
-                        file_path, self.issue_files.base)
+                        file_path, tmpdb)
+                except Exception as e:
+                    try:
+                        with open(file_path + ".err", "w") as fp:
+                            fp.write(str(e))
+                    except:
+                        pass
+            try:
+                shutil.copyfile(tmpdb + ".mst", self.issue_files.base + ".mst")
+                shutil.copyfile(tmpdb + ".xrf", self.issue_files.base + ".xrf")
+            except Exception as e:
+                raise BaseManagerCreateDBError(
+                    "Unable to copy %s to %s: %s" %
+                    (tmpdb, self.issue_files.base, e)
+                )
+            else:
+                try:
+                    os.unlink(tmpdb + ".mst")
+                    os.unlink(tmpdb + ".xrf")
+                except:
+                    pass
 
     def article_records(self, i_record, article, article_files):
         _article_records = None
