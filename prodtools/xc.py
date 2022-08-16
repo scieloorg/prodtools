@@ -132,8 +132,20 @@ class Reception(object):
             raise ForbiddenOperationError(
                 "Not allowed to call _receive_package_for_server")
         for package_path in self._queued_packages():
-            self.convert_package(package_path, optimise)
-            fs_utils.delete_file_or_folder(package_path)
+            try:
+                self.convert_package(package_path, optimise)
+            except Exception as e:
+                logger.exception(
+                    "Could not convert '%s'",
+                    package_path,
+                )
+                self.mailer.mail_failure(
+                    subject="Could not convert %s" % package_path,
+                    text=traceback.format_exc(),
+                    package=package_path,
+                )
+            finally:
+                fs_utils.delete_file_or_folder(package_path)
 
     def display_form(self):
         form.display_form(
