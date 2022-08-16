@@ -1490,11 +1490,12 @@ class IssueAndTitleManager(object):
             updated = not (diff.days > 0 or (diff.days == 0 and diff.seconds > 0))
 
         if updated:
-            result = self.db_isis.get_records(db, expr)
-        if len(result) == 0:
-            self.update_db_copy(source_db, db, fst_filename)
-            result = self.db_isis.get_records(db, expr)
-        return result[0] if len(result) > 0 else None
+            for first in self.db_isis.get_records(db, expr):
+                return first
+
+        self.update_db_copy(source_db, db, fst_filename)
+        for first in self.db_isis.get_records(db, expr):
+            return first
 
     def get_registered_data(self, journal_title, issue_label, p_issn, e_issn):
         msg = ""
