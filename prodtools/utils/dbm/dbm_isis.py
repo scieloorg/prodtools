@@ -25,6 +25,10 @@ class IDFileWriteError(Exception):
     ... 
 
 
+class CISISIsReadableError(Exception):
+    ...
+
+
 def remove_break_lines_characters(content):
     content = content or ""
     return ' '.join(content.split())
@@ -268,8 +272,15 @@ class CISIS(object):
 
     def is_readable(self, mst_filename):
         if os.path.isfile(mst_filename + '.mst'):
-            result = self.run_cmd("mx", mst_filename, "+control now")
-            return "dbxopen" not in result or "nxtmfn" in result
+            try:
+                result = self.run_cmd("mx", mst_filename, "+control now")
+            except CISISRunCommandError as e:
+                raise CISISIsReadableError(
+                    "Unable to check %s is readable: %s" %
+                    (mst_filename, e)
+                )
+            else:
+                return "dbxopen" not in result or "nxtmfn" in result
         return False
 
 
