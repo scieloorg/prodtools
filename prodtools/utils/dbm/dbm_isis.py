@@ -378,7 +378,7 @@ class UCISIS(object):
             base = os.path.join(temp_dir, os.path.basename(db_filename))
             self.search(db_filename, expr, base)
 
-        r = []
+        r = None
         id_filename = base + '.id'
         if os.path.isfile(base + '.mst'):
             self.i2id(base, id_filename)
