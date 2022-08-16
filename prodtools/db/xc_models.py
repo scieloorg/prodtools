@@ -1481,7 +1481,6 @@ class IssueAndTitleManager(object):
         return ' OR '.join(_expr) if len(_expr) > 0 else None
 
     def update_and_search(self, db, expr, source_db, fst_filename):
-        result = []
         updated = False
         if os.path.isfile(db + '.mst'):
             d_copy = fs_utils.last_modified_datetime(db + '.mst')
