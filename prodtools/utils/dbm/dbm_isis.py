@@ -192,7 +192,7 @@ class IDFile(object):
         try:
             fs_utils.write_file(filename, "", 'iso-8859-1')
 
-            for item in self._format_file(records):
+            for item in self._get_records(records):
                 item = html.unescape(item)
 
                 item = item.replace(PRESERVECIRC, "\\^")
