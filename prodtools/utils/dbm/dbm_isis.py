@@ -171,9 +171,10 @@ class IDFile(object):
         return data
 
     def read(self, filename):
+        logging.info("read: %s" % filename)
         iso_content = fs_utils.read_file(filename, 'iso-8859-1')
         if not iso_content:
-            raise IDFileReadError("Unable to read %s: %s" % (filename, e))
+            raise IDFileReadError("Unable to read %s" % filename)
         utf8_content = encoding.decode(iso_content)
         utf8_content = html.unescape(utf8_content)
         utf8_content = utf8_content.replace("\\^", PRESERVECIRC)
@@ -186,6 +187,7 @@ class IDFile(object):
         path = os.path.dirname(filename)
         if not os.path.isdir(path):
             os.makedirs(path)
+        logging.info("write: %s" % filename)
         fs_utils.write_file(filename, "", 'iso-8859-1')
         for record in self._format_records(records):
             try:
@@ -314,6 +316,8 @@ class UCISIS(object):
                     self._cisis_and_mst[mst_filename] = _cisis
             else:
                 _cisis = self.cisis1030
+        logging.info("cisis")
+        logging.info(_cisis and _cisis.cisis_path)
         return _cisis
 
     def version(self, mst_filename):
@@ -376,6 +380,10 @@ class UCISIS(object):
         self.update_indexes(db_filename, fst_filename)
 
     def get_records(self, db_filename, expr=None):
+        logging.info("UCISIS.get_records")
+        logging.info("db_filename=%s" % db_filename)
+        logging.info("expr=%s" % expr)
+
         temp_dir = None
         if expr is None:
             base = db_filename
@@ -384,9 +392,14 @@ class UCISIS(object):
             base = os.path.join(temp_dir, os.path.basename(db_filename))
             self.search(db_filename, expr, base)
 
+        logging.info("base=%s" % base)
+
         r = []
         id_filename = base + '.id'
         if os.path.isfile(base + '.mst'):
+
+            logging.info("id_filename=%s" % id_filename)
+
             self.i2id(base, id_filename)
             r = self.idfile.read(id_filename)
 

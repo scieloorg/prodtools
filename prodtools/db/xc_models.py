@@ -1482,12 +1482,20 @@ class IssueAndTitleManager(object):
         return ' OR '.join(_expr) if len(_expr) > 0 else None
 
     def update_and_search(self, db, expr, source_db, fst_filename):
+        logging.info("update_and_search")
+        logging.info("db=%s" % db)
+        logging.info("expr=%s" % expr)
+        logging.info("source_db=%s" % source_db)
+        logging.info("fst_filename=%s" % fst_filename)
+
         updated = False
         if os.path.isfile(db + '.mst'):
             d_copy = fs_utils.last_modified_datetime(db + '.mst')
             d_source = fs_utils.last_modified_datetime(source_db + '.mst')
             diff = d_source - d_copy
             updated = not (diff.days > 0 or (diff.days == 0 and diff.seconds > 0))
+
+        logging.info("updated=%s" % updated)
 
         result = []
         if updated:
@@ -1511,6 +1519,11 @@ class IssueAndTitleManager(object):
         msg = ""
         journal = None
         j_data = None
+
+        logging.info("get_registered_data")
+        logging.info("issue_label %s" % issue_label)
+        logging.info("p_issn %s" % p_issn)
+        logging.info("e_issn %s" % e_issn)
 
         result = self.get_registered_issue_data(issue_label, p_issn, e_issn)
         acron_issue_label, issue_models, issue_error_msg = result
