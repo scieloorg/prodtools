@@ -66,6 +66,12 @@ class IDFile(object):
             r.append(self._format_id(index) + self._format_record(item))
         return "".join(r)
 
+    def _get_records(self, records):
+        index = 0
+        for item in records:
+            index += 1
+            yield (self._format_id(index) + self._format_record(item))
+
     def _format_id(self, index):
         """
         Cria o ID do registro
@@ -178,23 +184,28 @@ class IDFile(object):
         return rec_list
 
     def write(self, filename, records):
+        logger.info("IDFile.write %s" % filename)
         path = os.path.dirname(filename)
         if not os.path.isdir(path):
             os.makedirs(path)
-        content = self._format_file(records)
-        content = html.unescape(content)
-
-        content = content.replace(PRESERVECIRC, "\\^")
-
-        # converterá a entidades, os caracteres utf-8 que não tem
-        # correspondencia em iso-8859-1
-        content = encoding.encode(content, "iso-8859-1")
-        content = encoding.decode(content, "iso-8859-1")
 
         try:
-            fs_utils.write_file(filename, content, 'iso-8859-1')
+            fs_utils.write_file(filename, "", 'iso-8859-1')
+
+            for item in self._format_file(records):
+                item = html.unescape(item)
+
+                item = item.replace(PRESERVECIRC, "\\^")
+
+                # converterá a entidades, os caracteres utf-8 que não tem
+                # correspondencia em iso-8859-1
+                item = encoding.encode(item, "iso-8859-1")
+                item = encoding.decode(item, "iso-8859-1")
+
+                fs_utils.append_file(filename, item, 'iso-8859-1')
         except (UnicodeError, IOError, OSError) as e:
-            logger.error("Nao foi possivel escrever o arquivo %s: %s", filename, e)
+            raise IDFileWriteError(
+                "Nao foi possivel escrever o arquivo %s: %s", filename, e)
 
 
 class CISIS(object):
