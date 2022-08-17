@@ -1069,7 +1069,7 @@ class BaseManager(object):
                 temp_db_dir = mkdtemp()
                 basename = os.path.basename(self.issue_files.id_filename)
                 name, ext = os.path.splitext(basename)
-                tempdb = os.path.join(temp_db_dir, name)
+                tmpdb = os.path.join(temp_db_dir, name)
             except OSError as e:
                 raise BaseManagerCreateDBError(
                     "Unable to create tmpdb for %s: %s" %
