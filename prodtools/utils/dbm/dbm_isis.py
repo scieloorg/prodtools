@@ -252,6 +252,8 @@ class CISIS(object):
 
     def i2id(self, mst_filename, id_filename):
         self.run_cmd("i2id", mst_filename, ">", id_filename)
+        logging.info("i2id: %s" % os.path.isfile(id_filename))
+        logging.info("size: %s" % os.path.getsize(id_filename))
 
     def mst2iso(self, mst_filename, iso_filename):
         self.run_cmd(
