@@ -17,6 +17,22 @@ logger = logging.getLogger()
 PRESERVECIRC = '[PRESERVECIRC]'
 
 
+class CISISRunCommandError(Exception):
+    ... 
+
+
+class IDFileWriteError(Exception):
+    ... 
+
+
+class CISISIsReadableError(Exception):
+    ...
+
+
+class IDFileReadError(Exception):
+    ...
+
+
 def remove_break_lines_characters(content):
     content = content or ""
     return ' '.join(content.split())
@@ -190,7 +206,10 @@ class CISIS(object):
 
     def run_cmd(self, cmd_name, *args):
         cmd = os.path.join(self.cisis_path, cmd_name) + " " + " ".join(args)
-        return system.run_command(cmd)
+        try:
+            return system.run_command(cmd)
+        except OSError as e:
+            raise CISISRunCommandError("Executed %s. Got %s" % (cmd, e))
 
     @property
     def is_available(self):
@@ -252,8 +271,15 @@ class CISIS(object):
 
     def is_readable(self, mst_filename):
         if os.path.isfile(mst_filename + '.mst'):
-            result = self.run_cmd("mx", mst_filename, "+control now")
-            return "dbxopen" not in result or "nxtmfn" in result
+            try:
+                result = self.run_cmd("mx", mst_filename, "+control now")
+            except CISISRunCommandError as e:
+                raise CISISIsReadableError(
+                    "Unable to check %s is readable: %s" %
+                    (mst_filename, e)
+                )
+            else:
+                return "dbxopen" not in result or "nxtmfn" in result
         return False
 
 
