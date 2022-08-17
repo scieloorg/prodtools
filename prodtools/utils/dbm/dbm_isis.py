@@ -67,12 +67,10 @@ class IDFile(object):
         return "".join(r)
 
     def _get_records(self, records):
-        r = []
         index = 0
         for item in records:
             index += 1
-            r.append(self._format_id(index) + self._format_record(item))
-        return "".join(r)
+            yield (self._format_id(index) + self._format_record(item))
 
     def _format_id(self, index):
         """
