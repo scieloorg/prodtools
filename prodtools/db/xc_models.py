@@ -2,8 +2,7 @@
 
 import os
 import shutil
-import logging
-from tempfile import NamedTemporaryFile
+from tempfile import mkdtemp
 
 from prodtools import _
 
@@ -1067,9 +1066,10 @@ class BaseManager(object):
     def create_db(self):
         if os.path.isfile(self.issue_files.id_filename):
             try:
-                temp_file = NamedTemporaryFile(delete=False)
-                temp_file.close()
-                tmpdb = temp_file.name
+                temp_db_dir = mkdtemp()
+                basename = os.path.basename(self.issue_files.id_filename)
+                name, ext = os.path.splitext(basename)
+                tempdb = os.path.join(temp_db_dir, name)
             except OSError as e:
                 raise BaseManagerCreateDBError(
                     "Unable to create tmpdb for %s: %s" %
@@ -1482,12 +1482,7 @@ class IssueAndTitleManager(object):
         return ' OR '.join(_expr) if len(_expr) > 0 else None
 
     def update_and_search(self, db, expr, source_db, fst_filename):
-        logging.info("update_and_search")
-        logging.info("db=%s" % db)
-        logging.info("expr=%s" % expr)
-        logging.info("source_db=%s" % source_db)
-        logging.info("fst_filename=%s" % fst_filename)
-
+        result = []
         updated = False
         if os.path.isfile(db + '.mst'):
             d_copy = fs_utils.last_modified_datetime(db + '.mst')
@@ -1495,35 +1490,17 @@ class IssueAndTitleManager(object):
             diff = d_source - d_copy
             updated = not (diff.days > 0 or (diff.days == 0 and diff.seconds > 0))
 
-        logging.info("updated=%s" % updated)
-
-        result = []
         if updated:
-            result = list(self.db_isis.get_records(db, expr))
-        if not result:
+            result = self.db_isis.get_records(db, expr)
+        if len(result) == 0:
             self.update_db_copy(source_db, db, fst_filename)
-            result = list(self.db_isis.get_records(db, expr))
-
-        if result:
-            return result[0]
-
-        # if updated:
-        #     for first in self.db_isis.get_records(db, expr):
-        #         return first
-
-        # self.update_db_copy(source_db, db, fst_filename)
-        # for first in self.db_isis.get_records(db, expr):
-        #     return first
+            result = self.db_isis.get_records(db, expr)
+        return result[0] if len(result) > 0 else None
 
     def get_registered_data(self, journal_title, issue_label, p_issn, e_issn):
         msg = ""
         journal = None
         j_data = None
-
-        logging.info("get_registered_data")
-        logging.info("issue_label %s" % issue_label)
-        logging.info("p_issn %s" % p_issn)
-        logging.info("e_issn %s" % e_issn)
 
         result = self.get_registered_issue_data(issue_label, p_issn, e_issn)
         acron_issue_label, issue_models, issue_error_msg = result

@@ -58,12 +58,6 @@ class IDFile(object):
     def __init__(self, content_formatter=None):
         self.content_formatter = content_formatter
 
-    def _format_records(self, records):
-        index = 0
-        for item in records:
-            index += 1
-            yield (self._format_id(index) + self._format_record(item))
-
     def _format_file(self, records):
         r = []
         index = 0
@@ -127,11 +121,11 @@ class IDFile(object):
         return ""
 
     def _format_subfields(self, subf_and_value_list):
-        return (
-            format_value(subf_and_value_list.get('_') or "") +
-            "".join([self._format_subfield(k, subf_and_value_list[k])
-                     for k in sorted(subf_and_value_list.keys())])
-        )
+        first = format_value(subf_and_value_list.get('_') or "")
+        values = [self._format_subfield(k, v)
+                  for k, v in subf_and_value_list.items()]
+        value = "".join(sorted(values))
+        return first + value
 
     def _tag_content(self, tag, value):
         if not 0 < int(tag) <= 999:
@@ -171,39 +165,36 @@ class IDFile(object):
         return data
 
     def read(self, filename):
-        logging.info("read: %s" % filename)
+        rec_list = []
         iso_content = fs_utils.read_file(filename, 'iso-8859-1')
-        if not iso_content:
-            raise IDFileReadError("Unable to read %s" % filename)
         utf8_content = encoding.decode(iso_content)
         utf8_content = html.unescape(utf8_content)
         utf8_content = utf8_content.replace("\\^", PRESERVECIRC)
 
         records = utf8_content.split('!ID ')
         for record in records[1:]:
-            yield self._get_record_data(record)
+            data = self._get_record_data(record)
+            rec_list.append(data)
+        return rec_list
 
     def write(self, filename, records):
         path = os.path.dirname(filename)
         if not os.path.isdir(path):
             os.makedirs(path)
-        logging.info("write: %s" % filename)
-        fs_utils.write_file(filename, "", 'iso-8859-1')
-        for record in self._format_records(records):
-            try:
-                record = html.unescape(record)
+        content = self._format_file(records)
+        content = html.unescape(content)
 
-                record = record.replace(PRESERVECIRC, "\\^")
+        content = content.replace(PRESERVECIRC, "\\^")
 
-                # converterá a entidades, os caracteres utf-8 que não tem
-                # correspondencia em iso-8859-1
-                record = encoding.encode(record, "iso-8859-1")
-                record = encoding.decode(record, "iso-8859-1")
+        # converterá a entidades, os caracteres utf-8 que não tem
+        # correspondencia em iso-8859-1
+        content = encoding.encode(content, "iso-8859-1")
+        content = encoding.decode(content, "iso-8859-1")
 
-                fs_utils.append_file(filename, record, 'iso-8859-1')
-            except (UnicodeError, IOError, OSError) as e:
-                raise IDFileWriteError(
-                    "Nao foi possivel escrever o arquivo %s: %s", filename, e)
+        try:
+            fs_utils.write_file(filename, content, 'iso-8859-1')
+        except (UnicodeError, IOError, OSError) as e:
+            logger.error("Nao foi possivel escrever o arquivo %s: %s", filename, e)
 
 
 class CISIS(object):
@@ -252,8 +243,6 @@ class CISIS(object):
 
     def i2id(self, mst_filename, id_filename):
         self.run_cmd("i2id", mst_filename, ">", id_filename)
-        logging.info("i2id: %s" % os.path.isfile(id_filename))
-        logging.info("size: %s" % os.path.getsize(id_filename))
 
     def mst2iso(self, mst_filename, iso_filename):
         self.run_cmd(
@@ -300,27 +289,19 @@ class UCISIS(object):
         self.idfile = IDFile()
         self.cisis1030 = cisis1030
         self.cisis1660 = cisis1660
-        self._cisis_and_mst = {}
 
     @property
     def is_available(self):
         return self.cisis1660.is_available or self.cisis1030.is_available
 
     def cisis(self, mst_filename):
-        _cisis = self._cisis_and_mst.get(mst_filename)
-        if not _cisis:
-            if os.path.isfile(mst_filename + '.mst'):
-                if self.cisis1030.is_readable(mst_filename):
-                    _cisis = self.cisis1030
-                    self._cisis_and_mst[mst_filename] = _cisis
-                elif self.cisis1660.is_readable(mst_filename):
-                    _cisis = self.cisis1660
-                    self._cisis_and_mst[mst_filename] = _cisis
-            else:
-                _cisis = self.cisis1030
-        logging.info("cisis")
-        logging.info(_cisis and _cisis.cisis_path)
-        return _cisis
+        if os.path.isfile(mst_filename + '.mst'):
+            if self.cisis1030.is_readable(mst_filename):
+                return self.cisis1030
+            elif self.cisis1660.is_readable(mst_filename):
+                return self.cisis1660
+        else:
+            return self.cisis1030
 
     def version(self, mst_filename):
         if self.cisis1030.is_readable(mst_filename):
@@ -382,10 +363,6 @@ class UCISIS(object):
         self.update_indexes(db_filename, fst_filename)
 
     def get_records(self, db_filename, expr=None):
-        logging.info("UCISIS.get_records")
-        logging.info("db_filename=%s" % db_filename)
-        logging.info("expr=%s" % expr)
-
         temp_dir = None
         if expr is None:
             base = db_filename
@@ -394,14 +371,9 @@ class UCISIS(object):
             base = os.path.join(temp_dir, os.path.basename(db_filename))
             self.search(db_filename, expr, base)
 
-        logging.info("base=%s" % base)
-
         r = []
         id_filename = base + '.id'
         if os.path.isfile(base + '.mst'):
-
-            logging.info("id_filename=%s" % id_filename)
-
             self.i2id(base, id_filename)
             r = self.idfile.read(id_filename)
 
