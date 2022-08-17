@@ -171,6 +171,7 @@ class IDFile(object):
         return data
 
     def read(self, filename):
+        result = []
         iso_content = fs_utils.read_file(filename, 'iso-8859-1')
         utf8_content = encoding.decode(iso_content)
         utf8_content = html.unescape(utf8_content)
@@ -178,7 +179,8 @@ class IDFile(object):
 
         records = utf8_content.split('!ID ')
         for record in records[1:]:
-            yield self._get_record_data(record)
+            result.append(self._get_record_data(record))
+        return result
 
     def write(self, filename, records):
         logger.info("IDFile.write %s" % filename)
