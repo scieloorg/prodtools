@@ -3,6 +3,7 @@ import sys
 import os
 import shutil
 import tempfile
+import logging
 from zipfile import ZipFile
 from datetime import datetime
 
@@ -34,7 +35,8 @@ def read_file(filename, encode='utf-8'):
     try:
         with open(filename, 'r', encoding=encode) as fp:
             content = fp.read()
-    except (FileNotFoundError, OSError):
+    except (FileNotFoundError, OSError) as e:
+        logging.info("read_file %s %s" % (filename, e))
         return
     else:
         return content
@@ -52,6 +54,7 @@ def write_file(filename, content, encode='utf-8', mode="w"):
             fp.write(content.encode(encode))
         return
     with open(filename, mode, encoding=encode) as fp:
+        logging.info("write_file %s %s" % (filename, len(content)))
         fp.write(content)
 
 
