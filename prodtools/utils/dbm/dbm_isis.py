@@ -176,8 +176,8 @@ class IDFile(object):
         utf8_content = encoding.decode(iso_content)
         utf8_content = html.unescape(utf8_content)
         utf8_content = utf8_content.replace("\\^", PRESERVECIRC)
-
-        records = utf8_content.split('!ID ')
+        utf8_content = "\n" + utf8_content
+        records = utf8_content.split('\n!ID ')
         for record in records[1:]:
             result.append(self._get_record_data(record))
         return result
